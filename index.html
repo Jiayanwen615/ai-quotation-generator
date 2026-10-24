@@ -1,10 +1,9 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Cleaning Quote & Profit Calculator V11</title>
+<title>Cleaning Quote & Profit Calculator V12</title>
 <style>
 *{box-sizing:border-box}
 body{font-family:Arial,sans-serif;background:#eef2f7;color:#253247;margin:0;padding:25px}
@@ -29,7 +28,7 @@ th:nth-child(4){width:14%}
 th:last-child{width:10%}
 .amount{font-weight:bold;overflow-wrap:anywhere}
 .total{text-align:right;font-size:25px;font-weight:bold;color:#175b9c;margin-top:25px}
-button{background:#175b9c;color:white;border:0;border-radius:6px;padding:12px 20px;margin-top:15px;cursor:pointer}
+button{background:#175b9c;color:white;border:0;border-radius:6px;padding:12px 20px;margin-top:15px;cursor:pointer;font:inherit}
 button:hover{background:#104677}
 .delete-btn{background:#c0392b;padding:9px 12px;margin-top:0}
 .delete-btn:hover{background:#922b21}
@@ -38,7 +37,8 @@ button:hover{background:#104677}
 .new-btn{background:#64748b}
 .new-btn:hover{background:#475569}
 .note{font-size:13px;color:#667085;line-height:1.5}
-.save-status{color:#16803c;font-size:13px;margin-top:12px}
+.save-status{color:#16803c;font-size:13px;margin-top:12px;line-height:1.5}
+.save-status.error{color:#b42318}
 .panel{background:#f2f7fd;border:1px solid #d6e5f7;border-radius:10px;padding:20px;margin-top:25px}
 .panel h2{color:#175b9c;margin-top:0}
 .result{margin-top:15px}
@@ -46,9 +46,15 @@ button:hover{background:#104677}
 .result-line{display:flex;justify-content:space-between;gap:12px;margin:12px 0}
 .result-line strong{overflow-wrap:anywhere;text-align:right}
 .suggested{border-top:2px solid #e1e5eb;padding-top:15px;color:#175b9c;font-size:22px;font-weight:bold}
-.warning{color:#a15b00;font-size:13px}
+.warning{color:#a15b00;font-size:13px;line-height:1.5}
 .toolbar{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:20px}
 .toolbar button{margin-top:0}
+.saved-card{background:white;border:1px solid #d6e5f7;border-radius:8px;padding:15px;margin-top:12px}
+.saved-card.active{border:2px solid #175b9c}
+.saved-title{font-weight:bold;overflow-wrap:anywhere}
+.saved-detail{font-size:13px;color:#667085;margin-top:6px;line-height:1.5;overflow-wrap:anywhere}
+.saved-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+.saved-actions button{margin:0;padding:8px 12px}
 @media(max-width:600px){
 .grid{grid-template-columns:1fr}
 .container{padding:20px}
@@ -80,6 +86,8 @@ th:nth-child(4){width:18%}
 
 <div class="toolbar">
 <button type="button" class="new-btn" onclick="newQuotation()">+ New Quotation</button>
+<button type="button" class="secondary-btn" onclick="saveQuotation()">Save Quotation</button>
+<button type="button" onclick="showSavedQuotations()">Saved Quotations</button>
 </div>
 
 <h1>QUOTATION</h1>
@@ -87,21 +95,21 @@ th:nth-child(4){width:18%}
 
 <div class="grid">
 <div>
-<label>Company Name</label>
+<label for="company">Company Name</label>
 <input id="company" placeholder="ABC Cleaning Services">
-<label>Company Email</label>
+<label for="companyEmail">Company Email</label>
 <input id="companyEmail" type="email" placeholder="contact@example.com">
-<label>Company Phone</label>
+<label for="companyPhone">Company Phone</label>
 <input id="companyPhone" placeholder="+1 555 123 4567">
 </div>
 <div>
-<label>Quotation Number</label>
+<label for="quoteNumber">Quotation Number</label>
 <input id="quoteNumber" value="QT-001">
-<label>Quotation Date</label>
+<label for="quoteDate">Quotation Date</label>
 <input id="quoteDate" type="date">
-<label>Valid Until</label>
+<label for="validUntil">Valid Until</label>
 <input id="validUntil" type="date">
-<label>Quotation Currency</label>
+<label for="currency">Quotation Currency</label>
 <select id="currency">
 <option value="USD">USD - US Dollar</option>
 <option value="AED">AED - UAE Dirham</option>
@@ -115,11 +123,11 @@ th:nth-child(4){width:18%}
 <h2 class="section-title">Bill To</h2>
 <div class="grid">
 <div>
-<label>Customer Name</label>
+<label for="customer">Customer Name</label>
 <input id="customer" placeholder="Customer Name">
 </div>
 <div>
-<label>Customer Email</label>
+<label for="customerEmail">Customer Email</label>
 <input id="customerEmail" type="email" placeholder="customer@example.com">
 </div>
 </div>
@@ -154,30 +162,32 @@ th:nth-child(4){width:18%}
 <div class="total" id="total">Total: USD 100.00</div>
 
 <div class="panel">
-<h2>Cleaning Cost & Profit Calculator</h2>
+<h2>Cleaning Cost &amp; Profit Calculator</h2>
 <p class="note">
 Estimate the cost of one cleaning visit or job.
 Enter costs in the selected quotation currency.
+Changing currency does not convert any amounts.
 </p>
+
 <div class="grid">
-<div><label>Number of Workers</label><input id="workers" type="number" min="0" step="1" value="2"></div>
-<div><label>Hours per Worker</label><input id="hours" type="number" min="0" step="0.25" value="4"></div>
-<div><label>Hourly Labor Cost</label><input id="laborRate" type="number" min="0" step="0.01" value="20"></div>
-<div><label>Payroll Burden (%)</label><input id="payrollBurden" type="number" min="0" step="0.1" value="0"></div>
-<div><label>Cleaning Supplies Cost</label><input id="supplies" type="number" min="0" step="0.01" value="20"></div>
-<div><label>Travel / Parking Cost</label><input id="travel" type="number" min="0" step="0.01" value="10"></div>
-<div><label>Other Overhead Cost</label><input id="overhead" type="number" min="0" step="0.01" value="10"></div>
-<div><label>Payment Processing Fee (%)</label><input id="processingFee" type="number" min="0" max="99" step="0.1" value="0"></div>
-<div><label>Target Gross Margin (%)</label><input id="targetMargin" type="number" min="0" max="99" step="1" value="35"></div>
+<div><label for="workers">Number of Workers</label><input id="workers" type="number" min="0" step="1" value="2"></div>
+<div><label for="hours">Hours per Worker</label><input id="hours" type="number" min="0" step="0.25" value="4"></div>
+<div><label for="laborRate">Hourly Labor Cost</label><input id="laborRate" type="number" min="0" step="0.01" value="20"></div>
+<div><label for="payrollBurden">Payroll Burden (%)</label><input id="payrollBurden" type="number" min="0" step="0.1" value="0"></div>
+<div><label for="supplies">Cleaning Supplies Cost</label><input id="supplies" type="number" min="0" step="0.01" value="20"></div>
+<div><label for="travel">Travel / Parking Cost</label><input id="travel" type="number" min="0" step="0.01" value="10"></div>
+<div><label for="overhead">Other Overhead Cost</label><input id="overhead" type="number" min="0" step="0.01" value="10"></div>
+<div><label for="processingFee">Payment Processing Fee (%)</label><input id="processingFee" type="number" min="0" max="99" step="0.1" value="0"></div>
+<div><label for="targetMargin">Target Gross Margin (%)</label><input id="targetMargin" type="number" min="0" max="99" step="1" value="35"></div>
 </div>
 
 <div class="profit-result">
-<div class="result-line"><span>Labor Cost</span><strong id="laborCostResult">USD 160.00</strong></div>
-<div class="result-line"><span>Payroll Burden Cost</span><strong id="burdenResult">USD 0.00</strong></div>
-<div class="result-line"><span>Total Estimated Cost</span><strong id="costResult">USD 200.00</strong></div>
-<div class="result-line"><span>Expected Processing Fee</span><strong id="feeResult">USD 0.00</strong></div>
-<div class="result-line"><span>Estimated Gross Profit</span><strong id="profitResult">USD 107.69</strong></div>
-<div class="result-line suggested"><span>Suggested Price</span><strong id="suggestedPrice">USD 307.69</strong></div>
+<div class="result-line"><span>Labor Cost</span><strong id="laborCostResult"></strong></div>
+<div class="result-line"><span>Payroll Burden Cost</span><strong id="burdenResult"></strong></div>
+<div class="result-line"><span>Total Estimated Cost</span><strong id="costResult"></strong></div>
+<div class="result-line"><span>Expected Processing Fee</span><strong id="feeResult"></strong></div>
+<div class="result-line"><span>Estimated Gross Profit</span><strong id="profitResult"></strong></div>
+<div class="result-line suggested"><span>Suggested Price</span><strong id="suggestedPrice"></strong></div>
 </div>
 
 <p class="warning" id="profitWarning"></p>
@@ -185,18 +195,19 @@ Enter costs in the selected quotation currency.
 <p class="note">
 This is an estimate, not a market-price guarantee.
 Gross margin is calculated after entered costs and payment fees.
+The profit shown above is based on the suggested price.
 Taxes and unentered expenses are excluded.
 </p>
 </div>
 
 <div class="panel">
 <h2>AI Service Description</h2>
-<p class="note">Free template-based assistant. No AI API is connected yet.</p>
-<label>Briefly describe the service</label>
+<p class="note">Free template-based assistant. No AI API is connected.</p>
+<label for="aiInput">Briefly describe the service</label>
 <textarea id="aiInput" rows="3" placeholder="Office cleaning, 200 sqm, twice a week"></textarea>
 <button type="button" onclick="generateDescription()">Generate Description</button>
 <div class="result">
-<label>Generated Description</label>
+<label for="aiOutput">Generated Description</label>
 <textarea id="aiOutput" rows="5" placeholder="Your professional English description will appear here."></textarea>
 </div>
 <button type="button" class="secondary-btn" onclick="useDescription()">Use in Quotation</button>
@@ -204,18 +215,44 @@ Taxes and unentered expenses are excluded.
 </div>
 
 <div id="notesSection">
-<h2 class="section-title">Notes & Terms</h2>
+<h2 class="section-title">Notes &amp; Terms</h2>
 <textarea id="notes" rows="4" placeholder="Payment terms, scope of work, exclusions, or additional notes."></textarea>
 </div>
 
-<p class="save-status" id="saveStatus">Ready to save</p>
-<p class="note">Data is saved in this browser only. Export the current quotation before starting a new one.</p>
+<p class="save-status" id="saveStatus" role="status" aria-live="polite">Loading quotations...</p>
+<p class="note">
+Quotations are saved only in this browser on this device.
+Clearing browser data can delete them. They are not synced to GitHub or other devices.
+Save important quotations as PDF.
+</p>
 <button type="button" onclick="printQuotation()">Print / Save as PDF</button>
+
+<div class="panel" id="savedQuotationsPanel">
+<h2>Saved Quotations</h2>
+<p class="note">
+Changes automatically update the quotation currently open.
+Use New Quotation to create a separate record.
+Opening a saved quotation lets you edit that record.
+Quotation numbers are labels; each record has its own internal ID.
+</p>
+<p id="savedCount" class="note"></p>
+<div id="savedList"></div>
+<button type="button" class="secondary-btn" onclick="downloadBackup()">Download All Data Backup</button>
+<p class="note">
+The JSON backup includes customer details, internal costs, and profit settings.
+Keep it private. Use PDF when sharing a quotation with a customer.
+This version can download backups; it does not include a backup import screen.
+</p>
+</div>
 
 </div>
 
 <script>
-const STORAGE_KEY="ai_quotation_generator_v4";
+"use strict";
+
+/* V12 uses a separate key. The original V11 key is never overwritten. */
+const LEGACY_KEY="ai_quotation_generator_v4";
+const STORAGE_KEY="ai_quotation_generator_v12";
 
 const fieldIds=[
 "company","companyEmail","companyPhone",
@@ -227,27 +264,70 @@ const fieldIds=[
 "processingFee","targetMargin"
 ];
 
+const costDefaults={
+workers:"2",
+hours:"4",
+laborRate:"20",
+payrollBurden:"0",
+supplies:"20",
+travel:"10",
+overhead:"10",
+processingFee:"0",
+targetMargin:"35"
+};
+
+const currencyCodes=["USD","AED","CNY","EUR","GBP"];
 const currencySelect=document.getElementById("currency");
 const quoteDate=document.getElementById("quoteDate");
 const validUntil=document.getElementById("validUntil");
 
-function money(value){
+let library=null;
+let lastStorageRaw=null;
+let savingBlocked=false;
+let currentSuggestedPrice=null;
+let defaultFields=null;
+
+function clone(value){
+return JSON.parse(JSON.stringify(value));
+}
+
+function setStatus(message,isError=false){
+const el=document.getElementById("saveStatus");
+el.textContent=message;
+el.classList.toggle("error",isError);
+}
+
+function nonNegativeValue(value){
+const number=Number(value);
+return Number.isFinite(number)?Math.max(0,number):0;
+}
+
+function nonNegative(id){
+return nonNegativeValue(document.getElementById(id).value);
+}
+
+function money(value,currency=currencySelect.value){
+const code=currencyCodes.includes(currency)?currency:"USD";
+if(!Number.isFinite(Number(value)))return "Not available";
 return new Intl.NumberFormat("en-US",{
 style:"currency",
-currency:currencySelect.value,
+currency:code,
 currencyDisplay:"code"
 }).format(Number(value));
 }
 
 function calculate(){
 let total=0;
+
 document.querySelectorAll("#items tr").forEach(row=>{
-const qty=Math.max(0,Number(row.querySelector(".qty").value)||0);
-const price=Math.max(0,Number(row.querySelector(".price").value)||0);
+const qty=nonNegativeValue(row.querySelector(".qty").value);
+const price=nonNegativeValue(row.querySelector(".price").value);
 const amount=qty*price;
+
 row.querySelector(".amount").textContent=money(amount);
 total+=amount;
 });
+
 document.getElementById("total").textContent="Total: "+money(total);
 document.getElementById("unitPriceHeading").textContent=
 "Unit Price ("+currencySelect.value+")";
@@ -264,6 +344,7 @@ document.querySelectorAll(".description").forEach(resizeDescription);
 
 function createRow(description="",qty="1",price="0"){
 const row=document.createElement("tr");
+
 row.innerHTML=`
 <td><textarea class="description" rows="3" placeholder="Service description"></textarea></td>
 <td><input type="number" min="0" class="qty"></td>
@@ -272,9 +353,11 @@ row.innerHTML=`
 <td class="actions">
 <button type="button" class="delete-btn" onclick="removeItem(this)">Delete</button>
 </td>`;
+
 row.querySelector(".description").value=description;
 row.querySelector(".qty").value=qty;
 row.querySelector(".price").value=price;
+
 return row;
 }
 
@@ -288,11 +371,11 @@ saveData();
 
 function removeItem(button){
 const row=button.closest("tr");
-if(row){
+if(!row)return;
+
 row.remove();
 calculate();
 saveData();
-}
 }
 
 function formatDate(date){
@@ -309,27 +392,20 @@ validUntil.value="";
 validUntil.min="";
 return;
 }
+
 const date=new Date(quoteDate.value+"T12:00:00");
 date.setDate(date.getDate()+30);
 validUntil.min=quoteDate.value;
 validUntil.value=formatDate(date);
 }
 
-function nonNegative(id){
-const value=Number(document.getElementById(id).value);
-return Number.isFinite(value)?Math.max(0,value):0;
-}
-
-let currentSuggestedPrice=null;
-
 function calculateProfit(){
-const workers=nonNegative("workers");
-const hours=nonNegative("hours");
-const rate=nonNegative("laborRate");
-const burdenPercent=nonNegative("payrollBurden");
+const laborCost=
+nonNegative("workers")*
+nonNegative("hours")*
+nonNegative("laborRate");
 
-const laborCost=workers*hours*rate;
-const burdenCost=laborCost*burdenPercent/100;
+const burdenCost=laborCost*nonNegative("payrollBurden")/100;
 
 const totalCost=
 laborCost+burdenCost+
@@ -340,22 +416,25 @@ nonNegative("overhead");
 const margin=nonNegative("targetMargin")/100;
 const fee=nonNegative("processingFee")/100;
 const denominator=1-margin-fee;
+const suggested=totalCost/denominator;
 const warning=document.getElementById("profitWarning");
 
 document.getElementById("laborCostResult").textContent=money(laborCost);
 document.getElementById("burdenResult").textContent=money(burdenCost);
 document.getElementById("costResult").textContent=money(totalCost);
 
-if(denominator<=0){
+if(denominator<=0||!Number.isFinite(suggested)){
 currentSuggestedPrice=null;
+
 document.getElementById("suggestedPrice").textContent="Not available";
 document.getElementById("profitResult").textContent="Not available";
 document.getElementById("feeResult").textContent="Not available";
-warning.textContent="Target margin plus processing fee must be less than 100%.";
+
+warning.textContent=
+"Check your costs. Target margin plus processing fee must be less than 100%.";
 return;
 }
 
-const suggested=totalCost/denominator;
 const processingCost=suggested*fee;
 const profit=suggested-totalCost-processingCost;
 
@@ -392,7 +471,10 @@ first.querySelector(".price").value=roundedPrice.toFixed(2);
 calculate();
 saveData();
 
-alert("Suggested price applied to the first service row. Quantity set to 1. Review other rows.");
+alert(
+"Suggested price applied to the first service row. "+
+"Quantity set to 1. Review other rows."
+);
 }
 
 function collectData(){
@@ -413,53 +495,469 @@ price:row.querySelector(".price").value
 return {fields,items};
 }
 
-function saveData(){
-try{
-localStorage.setItem(STORAGE_KEY,JSON.stringify(collectData()));
-document.getElementById("saveStatus").textContent=
-"Saved automatically in this browser";
-}catch(error){
-document.getElementById("saveStatus").textContent=
-"Auto-save unavailable. Please export your quotation.";
-}
+function validData(data){
+if(!data||typeof data!=="object")return false;
+if(!data.fields||typeof data.fields!=="object"||
+Array.isArray(data.fields))return false;
+if(!Array.isArray(data.items))return false;
+
+const validFields=fieldIds.every(id=>
+data.fields[id]===undefined||typeof data.fields[id]==="string"
+);
+
+const validItems=data.items.every(item=>
+item&&typeof item==="object"&&
+typeof item.description==="string"&&
+typeof item.qty==="string"&&
+typeof item.price==="string"
+);
+
+return validFields&&validItems;
 }
 
-function loadData(){
-let saved;
-try{
-const raw=localStorage.getItem(STORAGE_KEY);
-if(!raw)return false;
-saved=JSON.parse(raw);
-if(!saved||typeof saved!=="object")return false;
-}catch(error){
+function normalizeData(data){
+const fields={...defaultFields};
+
+fieldIds.forEach(id=>{
+if(typeof data.fields[id]==="string"){
+fields[id]=data.fields[id];
+}
+});
+
+if(!currencyCodes.includes(fields.currency)){
+fields.currency="USD";
+}
+
+return {
+fields,
+items:data.items.map(item=>({
+description:item.description,
+qty:item.qty,
+price:item.price
+}))
+};
+}
+
+function clearPrintClasses(){
+document.querySelectorAll(".print-hidden-empty").forEach(el=>{
+el.classList.remove("print-hidden-empty");
+});
+}
+
+function applyData(data){
+const normalized=normalizeData(data);
+
+fieldIds.forEach(id=>{
+document.getElementById(id).value=normalized.fields[id];
+});
+
+const tbody=document.getElementById("items");
+tbody.replaceChildren();
+
+normalized.items.forEach(item=>{
+tbody.appendChild(
+createRow(item.description,item.qty,item.price)
+);
+});
+
+validUntil.min=quoteDate.value||"";
+clearPrintClasses();
+resizeAllDescriptions();
+calculate();
+calculateProfit();
+}
+
+function makeId(){
+if(window.crypto&&typeof window.crypto.randomUUID==="function"){
+return window.crypto.randomUUID();
+}
+
+return "quote-"+Date.now().toString(36)+"-"+
+Math.random().toString(36).slice(2);
+}
+
+function makeRecord(data,existingRecords=[]){
+let id;
+
+do{
+id=makeId();
+}while(existingRecords.some(record=>record.id===id));
+
+const now=new Date().toISOString();
+
+return {
+id,
+createdAt:now,
+updatedAt:now,
+data:clone(data)
+};
+}
+
+function validLibrary(value){
+if(!value||value.version!==12)return false;
+if(!Array.isArray(value.quotations))return false;
+if(typeof value.currentId!=="string")return false;
+if(value.quotations.length===0)return false;
+
+const ids=new Set();
+
+for(const record of value.quotations){
+if(!record||typeof record.id!=="string"||!record.id||
+ids.has(record.id)||!validData(record.data)){
 return false;
 }
 
-if(saved.fields&&typeof saved.fields==="object"){
-fieldIds.forEach(id=>{
-if(typeof saved.fields[id]==="string"){
-document.getElementById(id).value=saved.fields[id];
-}
-});
-}
-
-if(Array.isArray(saved.items)){
-const tbody=document.getElementById("items");
-tbody.replaceChildren();
-saved.items.forEach(item=>{
-if(item&&typeof item==="object"){
-tbody.appendChild(createRow(
-String(item.description??""),
-String(item.qty??"1"),
-String(item.price??"0")
-));
-}
-});
+if(typeof record.createdAt!=="string"||
+typeof record.updatedAt!=="string"||
+!Number.isFinite(Date.parse(record.createdAt))||
+!Number.isFinite(Date.parse(record.updatedAt))){
+return false;
 }
 
-validUntil.min=quoteDate.value||"";
-calculate();
+ids.add(record.id);
+}
+
+return ids.has(value.currentId);
+}
+
+/*
+One write stores the entire library, including the current record.
+A failed write does not switch quotations or remove records.
+*/
+function persistLibrary(nextLibrary){
+if(savingBlocked){
+setStatus(
+"Saving paused to protect existing data. "+
+"Download a backup or PDF, then reload this page.",
+true
+);
+return false;
+}
+
+try{
+const actualRaw=localStorage.getItem(STORAGE_KEY);
+
+if(actualRaw!==lastStorageRaw){
+savingBlocked=true;
+
+setStatus(
+"Saved data changed in another tab. "+
+"This tab has stopped saving to prevent overwriting it. "+
+"Save your current work as PDF or download a backup before reloading.",
+true
+);
+return false;
+}
+
+const raw=JSON.stringify(nextLibrary);
+localStorage.setItem(STORAGE_KEY,raw);
+
+lastStorageRaw=raw;
+library=nextLibrary;
 return true;
+
+}catch(error){
+setStatus(
+"Could not save in this browser. Storage may be full or unavailable. "+
+"Your current screen is still available; save it as PDF or download a backup.",
+true
+);
+return false;
+}
+}
+
+function saveData(){
+if(!library){
+setStatus(
+"Browser storage is unavailable or could not be loaded. "+
+"Save the current quotation as PDF.",
+true
+);
+return false;
+}
+
+const next=clone(library);
+const record=next.quotations.find(item=>item.id===next.currentId);
+
+if(!record){
+setStatus("Current record is unavailable. Please reload the page.",true);
+return false;
+}
+
+record.data=collectData();
+record.updatedAt=new Date().toISOString();
+
+if(!persistLibrary(next))return false;
+
+setStatus(
+"Saved in this browser: "+
+(record.data.fields.quoteNumber.trim()||"Untitled quotation")+
+" · "+new Date().toLocaleTimeString()
+);
+
+renderSavedQuotations();
+return true;
+}
+
+function saveQuotation(){
+saveData();
+}
+
+function quotationTotal(data){
+return data.items.reduce((total,item)=>
+total+
+nonNegativeValue(item.qty)*nonNegativeValue(item.price),0
+);
+}
+
+function renderSavedQuotations(){
+const list=document.getElementById("savedList");
+list.replaceChildren();
+
+if(!library){
+document.getElementById("savedCount").textContent=
+"Saved quotations could not be loaded.";
+return;
+}
+
+document.getElementById("savedCount").textContent=
+library.quotations.length+" quotation(s) saved in this browser.";
+
+const records=[...library.quotations].sort((a,b)=>
+b.updatedAt.localeCompare(a.updatedAt)
+);
+
+records.forEach(record=>{
+const fields=record.data.fields;
+const active=record.id===library.currentId;
+
+const card=document.createElement("div");
+card.className="saved-card"+(active?" active":"");
+
+const title=document.createElement("div");
+title.className="saved-title";
+title.textContent=
+(fields.quoteNumber||"").trim()||"Untitled quotation";
+
+if(active)title.textContent+=" — Currently open";
+
+const detail=document.createElement("div");
+detail.className="saved-detail";
+detail.textContent=[
+(fields.customer||"").trim()||"No customer name",
+fields.quoteDate||"No quotation date",
+money(quotationTotal(record.data),fields.currency),
+"Saved: "+new Date(record.updatedAt).toLocaleString()
+].join(" · ");
+
+const actions=document.createElement("div");
+actions.className="saved-actions";
+
+const openButton=document.createElement("button");
+openButton.type="button";
+openButton.textContent=active?"Currently Open":"Open / Edit";
+openButton.addEventListener("click",()=>openQuotation(record.id));
+
+const deleteButton=document.createElement("button");
+deleteButton.type="button";
+deleteButton.className="delete-btn";
+deleteButton.textContent="Delete";
+deleteButton.addEventListener("click",()=>deleteQuotation(record.id));
+
+actions.append(openButton,deleteButton);
+card.append(title,detail,actions);
+list.appendChild(card);
+});
+}
+
+function showSavedQuotations(){
+renderSavedQuotations();
+document.getElementById("savedQuotationsPanel").scrollIntoView({
+behavior:"smooth",
+block:"start"
+});
+}
+
+function nextQuoteNumber(current,records){
+const text=String(current||"").trim();
+const match=text.match(/^(.*?)(\d+)$/);
+
+let prefix=match?match[1]:"QT-";
+let width=match?match[2].length:3;
+let number=match?Number(match[2])+1:1;
+
+if(!Number.isSafeInteger(number)){
+prefix="QT-";
+width=3;
+number=1;
+}
+
+const used=new Set(records.map(record=>
+String(record.data.fields.quoteNumber||"").trim()
+));
+
+let candidate;
+
+do{
+candidate=prefix+String(number).padStart(width,"0");
+number++;
+}while(used.has(candidate));
+
+return candidate;
+}
+
+function blankQuotation(source,records){
+const today=new Date();
+const expiry=new Date(today);
+expiry.setDate(expiry.getDate()+30);
+
+const fields={
+...defaultFields,
+...costDefaults,
+company:source.fields.company||"",
+companyEmail:source.fields.companyEmail||"",
+companyPhone:source.fields.companyPhone||"",
+currency:source.fields.currency||"USD",
+quoteNumber:nextQuoteNumber(source.fields.quoteNumber,records),
+quoteDate:formatDate(today),
+validUntil:formatDate(expiry),
+customer:"",
+customerEmail:"",
+notes:"",
+aiInput:"",
+aiOutput:""
+};
+
+return {
+fields,
+items:[{description:"",qty:"1",price:"0"}]
+};
+}
+
+function newQuotation(){
+if(!library){
+alert("Saved data is unavailable. Please save your work as PDF.");
+return;
+}
+
+/* Preserve the current quotation before creating another record. */
+if(!saveData()){
+alert(
+"The current quotation could not be saved. "+
+"A new quotation was not created. "+
+"Please save your current work as PDF or download a backup."
+);
+return;
+}
+
+const next=clone(library);
+const data=blankQuotation(collectData(),next.quotations);
+const record=makeRecord(data,next.quotations);
+
+next.quotations.push(record);
+next.currentId=record.id;
+
+if(!persistLibrary(next))return;
+
+applyData(record.data);
+renderSavedQuotations();
+setStatus(
+"New quotation saved: "+data.fields.quoteNumber+
+". Previous quotations are in Saved Quotations."
+);
+window.scrollTo({top:0,behavior:"smooth"});
+}
+
+function openQuotation(id){
+if(!library||id===library.currentId)return;
+if(!library.quotations.some(record=>record.id===id))return;
+
+/* Do not leave the current form unless its save succeeds. */
+if(!saveData()){
+alert(
+"The current quotation could not be saved. "+
+"Please save it as PDF or download a backup before switching."
+);
+return;
+}
+
+const next=clone(library);
+next.currentId=id;
+
+if(!persistLibrary(next))return;
+
+const record=library.quotations.find(item=>item.id===id);
+applyData(record.data);
+renderSavedQuotations();
+
+setStatus(
+"Opened for editing: "+
+(record.data.fields.quoteNumber.trim()||"Untitled quotation")+
+". Changes will update this record."
+);
+
+window.scrollTo({top:0,behavior:"smooth"});
+}
+
+function deleteQuotation(id){
+if(!library)return;
+
+const record=library.quotations.find(item=>item.id===id);
+if(!record)return;
+
+const name=id===library.currentId?
+document.getElementById("quoteNumber").value:
+record.data.fields.quoteNumber;
+
+const confirmed=confirm(
+'Delete quotation "'+(String(name||"").trim()||"Untitled quotation")+'"?\n\n'+
+"This removes it from Saved Quotations in this browser.\n"+
+"This cannot be undone. Save a PDF or backup first if needed."
+);
+
+if(!confirmed)return;
+
+/* Preserve any changes to the currently open quotation first. */
+if(!saveData()){
+alert("Deletion stopped because the current data could not be saved.");
+return;
+}
+
+const deletingCurrent=id===library.currentId;
+const next=clone(library);
+const source=collectData();
+
+next.quotations=next.quotations.filter(item=>item.id!==id);
+
+if(deletingCurrent){
+if(next.quotations.length){
+const newest=[...next.quotations].sort((a,b)=>
+b.updatedAt.localeCompare(a.updatedAt)
+)[0];
+
+next.currentId=newest.id;
+}else{
+const data=blankQuotation(source,library.quotations);
+const replacement=makeRecord(data,library.quotations);
+
+next.quotations.push(replacement);
+next.currentId=replacement.id;
+}
+}
+
+if(!persistLibrary(next))return;
+
+if(deletingCurrent){
+const current=library.quotations.find(item=>item.id===library.currentId);
+applyData(current.data);
+}
+
+renderSavedQuotations();
+setStatus(
+deletingCurrent?
+"Quotation deleted. Another quotation is now open.":
+"Quotation deleted. The current quotation is unchanged."
+);
 }
 
 function generateDescription(){
@@ -474,7 +972,8 @@ const clean=input.replace(/\s+/g," ").replace(/[.!?]+$/,"");
 
 document.getElementById("aiOutput").value=
 "Professional service quotation for "+clean+
-". The exact scope of work, schedule, and service requirements are subject to customer confirmation.";
+". The exact scope of work, schedule, and service requirements "+
+"are subject to customer confirmation.";
 
 saveData();
 }
@@ -504,14 +1003,13 @@ alert("Description added to quotation.");
 }
 
 function preparePrint(){
-document.querySelectorAll(".print-hidden-empty").forEach(el=>{
-el.classList.remove("print-hidden-empty");
-});
+clearPrintClasses();
 
 document.querySelectorAll(".container label").forEach(label=>{
 if(label.closest(".panel"))return;
 
 const field=label.nextElementSibling;
+
 if(!field||!field.matches("input,textarea,select"))return;
 
 if(!String(field.value||"").trim()){
@@ -520,9 +1018,14 @@ field.classList.add("print-hidden-empty");
 }
 });
 
-if(!document.getElementById("notes").value.trim()){
+const notes=document.getElementById("notes");
+
+if(!notes.value.trim()){
 document.getElementById("notesSection").classList.add("print-hidden-empty");
 }
+
+notes.style.height="auto";
+notes.style.height=notes.scrollHeight+"px";
 }
 
 function printQuotation(){
@@ -533,94 +1036,167 @@ preparePrint();
 window.print();
 }
 
+/* Also handle printing through the browser menu or Ctrl+P. */
+window.addEventListener("beforeprint",()=>{
+calculate();
+resizeAllDescriptions();
+preparePrint();
+});
+
 window.addEventListener("afterprint",()=>{
-document.querySelectorAll(".print-hidden-empty").forEach(el=>{
-el.classList.remove("print-hidden-empty");
+clearPrintClasses();
+document.getElementById("notes").style.height="";
 });
-});
 
-/* V11: CREATE A NEW QUOTATION */
-function nextQuoteNumber(current){
-const match=current.match(/^(.*?)(\d+)$/);
-
-if(!match){
-return "QT-001";
-}
-
-const prefix=match[1];
-const digits=match[2];
-const next=String(Number(digits)+1).padStart(digits.length,"0");
-
-return prefix+next;
-}
-
-function newQuotation(){
-const confirmed=confirm(
-"Create a new quotation?\n\n"+
-"The current quotation will be replaced in this browser.\n"+
-"Please save the current quotation as PDF first.\n\n"+
-"Company details and currency will be kept."
-);
-
-if(!confirmed)return;
-
-const currentNumber=document.getElementById("quoteNumber").value.trim();
-const newNumber=nextQuoteNumber(currentNumber);
-
-document.getElementById("quoteNumber").value=newNumber;
-document.getElementById("customer").value="";
-document.getElementById("customerEmail").value="";
-document.getElementById("notes").value="";
-document.getElementById("aiInput").value="";
-document.getElementById("aiOutput").value="";
-
-quoteDate.value=formatDate(new Date());
-updateValidUntil();
-
-const tbody=document.getElementById("items");
-tbody.replaceChildren();
-tbody.appendChild(createRow("", "1", "0"));
-
-const defaults={
-workers:"2",
-hours:"4",
-laborRate:"20",
-payrollBurden:"0",
-supplies:"20",
-travel:"10",
-overhead:"10",
-processingFee:"0",
-targetMargin:"35"
+/*
+A downloadable recovery copy includes the open form even if saving failed.
+It also keeps the raw storage strings for recovery.
+*/
+function downloadBackup(){
+try{
+const backup={
+application:"Cleaning Quote & Profit Calculator",
+version:12,
+exportedAt:new Date().toISOString(),
+currentForm:collectData(),
+library:library?clone(library):null
 };
 
-Object.keys(defaults).forEach(id=>{
-document.getElementById(id).value=defaults[id];
-});
-
-document.querySelectorAll(".print-hidden-empty").forEach(el=>{
-el.classList.remove("print-hidden-empty");
-});
-
-resizeAllDescriptions();
-calculate();
-calculateProfit();
-saveData();
-
-window.scrollTo({top:0,behavior:"smooth"});
-
-alert("New quotation created: "+newNumber);
+try{
+backup.rawV12=localStorage.getItem(STORAGE_KEY);
+backup.rawV11=localStorage.getItem(LEGACY_KEY);
+}catch(error){
+backup.storageReadError="Browser storage could not be read.";
 }
+
+const blob=new Blob(
+[JSON.stringify(backup,null,2)],
+{type:"application/json"}
+);
+
+const url=URL.createObjectURL(blob);
+const link=document.createElement("a");
+
+link.href=url;
+link.download="quotation-backup-"+formatDate(new Date())+"-"+Date.now()+".json";
+document.body.appendChild(link);
+link.click();
+link.remove();
+
+setTimeout(()=>URL.revokeObjectURL(url),10000);
+
+}catch(error){
+alert("Backup download failed. Please save the current quotation as PDF.");
+}
+}
+
+function initializeStorage(){
+try{
+lastStorageRaw=localStorage.getItem(STORAGE_KEY);
+
+if(lastStorageRaw!==null){
+const loaded=JSON.parse(lastStorageRaw);
+
+if(!validLibrary(loaded)){
+throw new Error("Invalid V12 data");
+}
+
+library=loaded;
+
+const current=library.quotations.find(record=>
+record.id===library.currentId
+);
+
+applyData(current.data);
+renderSavedQuotations();
+
+setStatus(
+"Previous quotation restored. "+
+library.quotations.length+" quotation(s) saved in this browser."
+);
+return;
+}
+
+const legacyRaw=localStorage.getItem(LEGACY_KEY);
+let data=collectData();
+let migrated=false;
+
+if(legacyRaw!==null){
+const legacy=JSON.parse(legacyRaw);
+
+if(!validData(legacy)){
+throw new Error("Invalid V11 data");
+}
+
+data=normalizeData(legacy);
+migrated=true;
+}
+
+const record=makeRecord(data);
+
+const initial={
+version:12,
+currentId:record.id,
+quotations:[record]
+};
+
+/* Display the legacy quotation even if the new storage write fails. */
+applyData(data);
+
+if(!persistLibrary(initial)){
+renderSavedQuotations();
+return;
+}
+
+renderSavedQuotations();
+
+setStatus(
+migrated?
+"V11 quotation copied safely into Saved Quotations. "+
+"The original V11 storage data has been kept.":
+"Ready. This quotation is saved automatically in this browser."
+);
+
+}catch(error){
+savingBlocked=true;
+
+setStatus(
+"Saved data could not be read. Automatic saving is paused "+
+"to protect existing records. Do not clear browser data. "+
+"Download All Data Backup before attempting recovery.",
+true
+);
+
+renderSavedQuotations();
+
+alert(
+"Existing saved data could not be read.\n\n"+
+"It has not been overwritten or deleted.\n"+
+"Please use Download All Data Backup to keep a recovery copy."
+);
+}
+}
+
+/* Detect another tab changing or clearing this application's data. */
+window.addEventListener("storage",event=>{
+if(event.key!==STORAGE_KEY&&event.key!==null)return;
+
+savingBlocked=true;
+
+setStatus(
+"Saved data changed in another tab. Saving is paused in this tab "+
+"to prevent overwriting records. Save your current work as PDF "+
+"or download a backup before reloading.",
+true
+);
+});
 
 /* INITIALIZATION */
 quoteDate.value=formatDate(new Date());
 updateValidUntil();
+defaultFields=clone(collectData().fields);
 
-const restored=loadData();
-
-if(restored){
-document.getElementById("saveStatus").textContent=
-"Previous quotation restored";
-}
+initializeStorage();
 
 quoteDate.addEventListener("change",()=>{
 updateValidUntil();
@@ -633,6 +1209,7 @@ validUntil.value<quoteDate.value){
 alert("Valid Until cannot be earlier than Quotation Date.");
 updateValidUntil();
 }
+
 saveData();
 });
 
@@ -643,14 +1220,15 @@ saveData();
 });
 
 document.querySelector(".container").addEventListener("input",event=>{
-if(event.target.matches("input,textarea")){
+if(!event.target.matches("input,textarea"))return;
+
 if(event.target.classList.contains("description")){
 resizeDescription(event.target);
 }
+
 calculate();
 calculateProfit();
 saveData();
-}
 });
 
 resizeAllDescriptions();
