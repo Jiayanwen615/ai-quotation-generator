@@ -4,11 +4,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Quotation Generator V7</title>
+<title>Cleaning Quote & Profit Calculator V8</title>
 <style>
 *{box-sizing:border-box}
 body{font-family:Arial,sans-serif;background:#eef2f7;color:#253247;margin:0;padding:25px}
-.container{max-width:900px;margin:auto;background:white;padding:35px;border-radius:12px;box-shadow:0 4px 20px #0001}
+.container{max-width:950px;margin:auto;background:white;padding:35px;border-radius:12px;box-shadow:0 4px 20px #0001}
 h1{color:#175b9c;margin-bottom:8px}
 .subtitle{color:#667085;margin-bottom:30px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
@@ -33,13 +33,18 @@ button{background:#175b9c;color:white;border:0;border-radius:6px;padding:12px 20
 button:hover{background:#104677}
 .delete-btn{background:#c0392b;padding:9px 12px;margin-top:0}
 .delete-btn:hover{background:#922b21}
-.note{font-size:13px;color:#667085}
+.note{font-size:13px;color:#667085;line-height:1.5}
 .save-status{color:#16803c;font-size:13px;margin-top:12px}
-.ai-panel{background:#f2f7fd;border:1px solid #d6e5f7;border-radius:10px;padding:20px;margin-top:25px}
-.ai-panel h2{color:#175b9c;margin-top:0}
-.ai-result{margin-top:15px}
+.panel{background:#f2f7fd;border:1px solid #d6e5f7;border-radius:10px;padding:20px;margin-top:25px}
+.panel h2{color:#175b9c;margin-top:0}
+.result{margin-top:15px}
 .secondary-btn{background:#287c65}
 .secondary-btn:hover{background:#1b5f4e}
+.profit-result{background:white;border:1px solid #d6e5f7;border-radius:8px;padding:18px;margin-top:20px}
+.result-line{display:flex;justify-content:space-between;gap:12px;margin:12px 0}
+.result-line strong{overflow-wrap:anywhere;text-align:right}
+.suggested{border-top:2px solid #e1e5eb;padding-top:15px;color:#175b9c;font-size:22px;font-weight:bold}
+.warning{color:#a15b00;font-size:13px}
 @media(max-width:600px){
 .grid{grid-template-columns:1fr}
 .container{padding:20px}
@@ -50,7 +55,7 @@ table{min-width:650px}
 @page{margin:15mm}
 body{background:white;padding:0}
 .container{box-shadow:none;padding:0;border-radius:0}
-button,.note,.actions,.save-status,.ai-panel{display:none!important}
+button,.note,.actions,.save-status,.panel{display:none!important}
 input,textarea,select{border:0!important;padding:0!important;background:transparent;color:#253247}
 input::placeholder,textarea::placeholder{color:transparent}
 textarea{resize:none!important;overflow:visible!important}
@@ -67,25 +72,32 @@ th:nth-child(4){width:18%}
 </head>
 <body>
 <div class="container">
+
 <h1>QUOTATION</h1>
-<p class="subtitle">Professional Service Quotation</p>
+<p class="subtitle">Cleaning Quote & Profit Calculator</p>
 
 <div class="grid">
 <div>
 <label>Company Name</label>
 <input id="company" placeholder="ABC Cleaning Services">
+
 <label>Company Email</label>
 <input id="companyEmail" type="email" placeholder="contact@example.com">
+
 <label>Company Phone</label>
 <input id="companyPhone" placeholder="+1 555 123 4567">
 </div>
+
 <div>
 <label>Quotation Number</label>
 <input id="quoteNumber" value="QT-001">
+
 <label>Quotation Date</label>
 <input id="quoteDate" type="date">
+
 <label>Valid Until</label>
 <input id="validUntil" type="date">
+
 <label>Quotation Currency</label>
 <select id="currency">
 <option value="USD">USD - US Dollar</option>
@@ -126,45 +138,147 @@ th:nth-child(4){width:18%}
 <td><textarea class="description" rows="3" placeholder="Office cleaning"></textarea></td>
 <td><input type="number" min="0" value="1" class="qty"></td>
 <td><input type="number" min="0" step="0.01" value="100" class="price"></td>
-<td class="amount">$100.00</td>
-<td class="actions"><button type="button" class="delete-btn" onclick="removeItem(this)">Delete</button></td>
+<td class="amount">USD 100.00</td>
+<td class="actions">
+<button type="button" class="delete-btn" onclick="removeItem(this)">Delete</button>
+</td>
 </tr>
 </tbody>
 </table>
 </div>
 
 <button type="button" onclick="addItem()">+ Add Service</button>
-<div class="total" id="total">Total: $100.00</div>
+<div class="total" id="total">Total: USD 100.00</div>
 
-<div class="ai-panel">
+<!-- PROFIT CALCULATOR -->
+<div class="panel">
+<h2>Cleaning Cost & Profit Calculator</h2>
+<p class="note">
+Estimate the cost of one cleaning visit or one job.
+Enter costs in the selected quotation currency.
+</p>
+
+<div class="grid">
+<div>
+<label>Number of Workers</label>
+<input id="workers" type="number" min="0" step="1" value="2">
+</div>
+<div>
+<label>Hours per Worker</label>
+<input id="hours" type="number" min="0" step="0.25" value="4">
+</div>
+<div>
+<label>Hourly Labor Cost</label>
+<input id="laborRate" type="number" min="0" step="0.01" value="20">
+</div>
+<div>
+<label>Payroll Burden (%)</label>
+<input id="payrollBurden" type="number" min="0" step="0.1" value="0">
+</div>
+<div>
+<label>Cleaning Supplies Cost</label>
+<input id="supplies" type="number" min="0" step="0.01" value="20">
+</div>
+<div>
+<label>Travel / Parking Cost</label>
+<input id="travel" type="number" min="0" step="0.01" value="10">
+</div>
+<div>
+<label>Other Overhead Cost</label>
+<input id="overhead" type="number" min="0" step="0.01" value="10">
+</div>
+<div>
+<label>Payment Processing Fee (%)</label>
+<input id="processingFee" type="number" min="0" max="99" step="0.1" value="0">
+</div>
+<div>
+<label>Target Gross Margin (%)</label>
+<input id="targetMargin" type="number" min="0" max="99" step="1" value="35">
+</div>
+</div>
+
+<div class="profit-result">
+<div class="result-line">
+<span>Labor Cost</span>
+<strong id="laborCostResult">USD 160.00</strong>
+</div>
+<div class="result-line">
+<span>Payroll Burden Cost</span>
+<strong id="burdenResult">USD 0.00</strong>
+</div>
+<div class="result-line">
+<span>Total Estimated Cost</span>
+<strong id="costResult">USD 200.00</strong>
+</div>
+<div class="result-line">
+<span>Expected Processing Fee</span>
+<strong id="feeResult">USD 0.00</strong>
+</div>
+<div class="result-line">
+<span>Estimated Gross Profit</span>
+<strong id="profitResult">USD 107.69</strong>
+</div>
+<div class="result-line suggested">
+<span>Suggested Price</span>
+<strong id="suggestedPrice">USD 307.69</strong>
+</div>
+</div>
+
+<p class="warning" id="profitWarning"></p>
+
+<button type="button" class="secondary-btn" onclick="applySuggestedPrice()">
+Use Suggested Price in Quotation
+</button>
+
+<p class="note">
+This is an estimate, not a market-price guarantee.
+Gross margin is calculated after entered costs and payment fees.
+Taxes and any unentered expenses are excluded.
+</p>
+</div>
+
+<!-- DESCRIPTION GENERATOR -->
+<div class="panel">
 <h2>AI Service Description</h2>
 <p class="note">Free template-based assistant. No AI API is connected yet.</p>
+
 <label>Briefly describe the service</label>
 <textarea id="aiInput" rows="3" placeholder="Office cleaning, 200 sqm, twice a week"></textarea>
+
 <button type="button" onclick="generateDescription()">Generate Description</button>
-<div class="ai-result">
+
+<div class="result">
 <label>Generated Description</label>
 <textarea id="aiOutput" rows="5" placeholder="Your professional English description will appear here."></textarea>
 </div>
-<button type="button" class="secondary-btn" onclick="useDescription()">Use in Quotation</button>
-<p class="note">Please review the generated text before using it in a customer quotation.</p>
+
+<button type="button" class="secondary-btn" onclick="useDescription()">
+Use in Quotation
+</button>
+
+<p class="note">Review generated text before sending it to a customer.</p>
 </div>
 
 <h2 class="section-title">Notes & Terms</h2>
 <textarea id="notes" rows="4" placeholder="Payment terms, scope of work, exclusions, or additional notes."></textarea>
 
 <p class="save-status" id="saveStatus">Ready to save</p>
-<p class="note">Data is saved in this browser only. Review all details before sending.</p>
+<p class="note">Data is saved in this browser only.</p>
+
 <button type="button" onclick="printQuotation()">Print / Save as PDF</button>
 </div>
 
 <script>
 const STORAGE_KEY="ai_quotation_generator_v4";
+
 const fieldIds=[
 "company","companyEmail","companyPhone",
 "quoteNumber","quoteDate","validUntil",
 "customer","customerEmail","notes",
-"aiInput","aiOutput","currency"
+"aiInput","aiOutput","currency",
+"workers","hours","laborRate","payrollBurden",
+"supplies","travel","overhead",
+"processingFee","targetMargin"
 ];
 
 const currencySelect=document.getElementById("currency");
@@ -181,13 +295,16 @@ currencyDisplay:"code"
 
 function calculate(){
 let total=0;
+
 document.querySelectorAll("#items tr").forEach(row=>{
 const qty=Math.max(0,Number(row.querySelector(".qty").value)||0);
 const price=Math.max(0,Number(row.querySelector(".price").value)||0);
 const amount=qty*price;
+
 row.querySelector(".amount").textContent=money(amount);
 total+=amount;
 });
+
 document.getElementById("total").textContent="Total: "+money(total);
 document.getElementById("unitPriceHeading").textContent=
 "Unit Price ("+currencySelect.value+")";
@@ -204,15 +321,20 @@ document.querySelectorAll(".description").forEach(resizeDescription);
 
 function createRow(description="",qty="1",price="0"){
 const row=document.createElement("tr");
+
 row.innerHTML=`
 <td><textarea class="description" rows="3" placeholder="Service description"></textarea></td>
 <td><input type="number" min="0" class="qty"></td>
 <td><input type="number" min="0" step="0.01" class="price"></td>
 <td class="amount"></td>
-<td class="actions"><button type="button" class="delete-btn" onclick="removeItem(this)">Delete</button></td>`;
+<td class="actions">
+<button type="button" class="delete-btn" onclick="removeItem(this)">Delete</button>
+</td>`;
+
 row.querySelector(".description").value=description;
 row.querySelector(".qty").value=qty;
 row.querySelector(".price").value=price;
+
 return row;
 }
 
@@ -253,36 +375,135 @@ validUntil.min=quoteDate.value;
 validUntil.value=formatDate(date);
 }
 
+function nonNegative(id){
+const value=Number(document.getElementById(id).value);
+return Number.isFinite(value)?Math.max(0,value):0;
+}
+
+let currentSuggestedPrice=null;
+
+function calculateProfit(){
+const workers=nonNegative("workers");
+const hours=nonNegative("hours");
+const rate=nonNegative("laborRate");
+const burdenPercent=nonNegative("payrollBurden");
+
+const laborCost=workers*hours*rate;
+const burdenCost=laborCost*burdenPercent/100;
+
+const totalCost=
+laborCost+burdenCost+
+nonNegative("supplies")+
+nonNegative("travel")+
+nonNegative("overhead");
+
+const margin=nonNegative("targetMargin")/100;
+const fee=nonNegative("processingFee")/100;
+
+const denominator=1-margin-fee;
+const warning=document.getElementById("profitWarning");
+
+document.getElementById("laborCostResult").textContent=money(laborCost);
+document.getElementById("burdenResult").textContent=money(burdenCost);
+document.getElementById("costResult").textContent=money(totalCost);
+
+if(denominator<=0){
+currentSuggestedPrice=null;
+document.getElementById("suggestedPrice").textContent="Not available";
+document.getElementById("profitResult").textContent="Not available";
+document.getElementById("feeResult").textContent="Not available";
+warning.textContent="Target margin plus processing fee must be less than 100%.";
+return;
+}
+
+const suggested=totalCost/denominator;
+const processingCost=suggested*fee;
+const profit=suggested-totalCost-processingCost;
+
+currentSuggestedPrice=suggested;
+
+document.getElementById("feeResult").textContent=money(processingCost);
+document.getElementById("profitResult").textContent=money(profit);
+document.getElementById("suggestedPrice").textContent=money(suggested);
+
+warning.textContent=totalCost===0?
+"Enter your actual costs before using the suggested price.":"";
+}
+
+function applySuggestedPrice(){
+calculateProfit();
+
+if(currentSuggestedPrice===null||currentSuggestedPrice<=0){
+alert("Please enter valid costs and profit settings first.");
+return;
+}
+
+const rows=document.querySelectorAll("#items tr");
+
+if(rows.length===0){
+const row=createRow("Cleaning service","1","0");
+document.getElementById("items").appendChild(row);
+}
+
+const first=document.querySelector("#items tr");
+const priceInput=first.querySelector(".price");
+const qtyInput=first.querySelector(".qty");
+
+const roundedPrice=Math.ceil(currentSuggestedPrice*100)/100;
+
+qtyInput.value="1";
+priceInput.value=roundedPrice.toFixed(2);
+
+calculate();
+saveData();
+
+alert(
+"Suggested price applied to the first service row. "+
+"Quantity was set to 1. Please review all other rows before sending."
+);
+}
+
 function collectData(){
 const fields={};
+
 fieldIds.forEach(id=>{
 fields[id]=document.getElementById(id).value;
 });
-const items=Array.from(document.querySelectorAll("#items tr")).map(row=>({
+
+const items=Array.from(
+document.querySelectorAll("#items tr")
+).map(row=>({
 description:row.querySelector(".description").value,
 qty:row.querySelector(".qty").value,
 price:row.querySelector(".price").value
 }));
+
 return {fields,items};
 }
 
 function saveData(){
 try{
 localStorage.setItem(STORAGE_KEY,JSON.stringify(collectData()));
-document.getElementById("saveStatus").textContent="Saved automatically in this browser";
+document.getElementById("saveStatus").textContent=
+"Saved automatically in this browser";
 }catch(error){
-document.getElementById("saveStatus").textContent="Auto-save unavailable. Please export your quotation.";
+document.getElementById("saveStatus").textContent=
+"Auto-save unavailable. Please export your quotation.";
 }
 }
 
 function loadData(){
 let saved;
+
 try{
 const raw=localStorage.getItem(STORAGE_KEY);
 if(!raw)return false;
 saved=JSON.parse(raw);
 if(!saved||typeof saved!=="object")return false;
-}catch(error){return false;}
+}catch(error){
+return false;
+}
+
 if(saved.fields&&typeof saved.fields==="object"){
 fieldIds.forEach(id=>{
 if(typeof saved.fields[id]==="string"){
@@ -290,9 +511,11 @@ document.getElementById(id).value=saved.fields[id];
 }
 });
 }
+
 if(Array.isArray(saved.items)){
 const tbody=document.getElementById("items");
 tbody.replaceChildren();
+
 saved.items.forEach(item=>{
 if(item&&typeof item==="object"){
 tbody.appendChild(createRow(
@@ -303,6 +526,7 @@ String(item.price??"0")
 }
 });
 }
+
 validUntil.min=quoteDate.value||"";
 calculate();
 return true;
@@ -310,24 +534,32 @@ return true;
 
 function generateDescription(){
 const input=document.getElementById("aiInput").value.trim();
+
 if(!input){
 alert("Please enter a short service description first.");
 return;
 }
+
 const clean=input.replace(/\s+/g," ").replace(/[.!?]+$/,"");
-const output="Professional service quotation for "+clean+
+
+const output=
+"Professional service quotation for "+clean+
 ". The exact scope of work, schedule, and service requirements are subject to customer confirmation.";
+
 document.getElementById("aiOutput").value=output;
 saveData();
 }
 
 function useDescription(){
 const text=document.getElementById("aiOutput").value.trim();
+
 if(!text){
 alert("Please generate or enter a description first.");
 return;
 }
+
 const first=document.querySelector("#items tr .description");
+
 if(first){
 first.value=text;
 resizeDescription(first);
@@ -336,6 +568,7 @@ const row=createRow(text,"1","0");
 document.getElementById("items").appendChild(row);
 resizeDescription(row.querySelector(".description"));
 }
+
 calculate();
 saveData();
 alert("Description added to quotation.");
@@ -350,9 +583,12 @@ window.print();
 
 quoteDate.value=formatDate(new Date());
 updateValidUntil();
+
 const restored=loadData();
+
 if(restored){
-document.getElementById("saveStatus").textContent="Previous quotation restored";
+document.getElementById("saveStatus").textContent=
+"Previous quotation restored";
 }
 
 quoteDate.addEventListener("change",()=>{
@@ -371,6 +607,7 @@ saveData();
 
 currencySelect.addEventListener("change",()=>{
 calculate();
+calculateProfit();
 saveData();
 });
 
@@ -380,12 +617,14 @@ if(event.target.classList.contains("description")){
 resizeDescription(event.target);
 }
 calculate();
+calculateProfit();
 saveData();
 }
 });
 
 resizeAllDescriptions();
 calculate();
+calculateProfit();
 </script>
 </body>
 </html>
