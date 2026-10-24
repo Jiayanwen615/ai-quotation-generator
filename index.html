@@ -4,170 +4,514 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Professional Quotation Generator</title>
+<title>AI Quotation Generator</title>
+
 <style>
-*{box-sizing:border-box}
-body{font-family:Arial,sans-serif;background:#eef2f7;margin:0;padding:25px;color:#253247}
-.container{max-width:850px;margin:auto;background:white;padding:35px;border-radius:12px;box-shadow:0 4px 20px #0001}
-h1{color:#175b9c;margin-bottom:8px}
-.subtitle{color:#667085;margin-bottom:30px}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-label{display:block;font-weight:bold;margin:15px 0 6px}
-input,textarea{width:100%;padding:11px;border:1px solid #ccd5e0;border-radius:6px;font:inherit}
-textarea{resize:vertical}
-table{width:100%;border-collapse:collapse;margin-top:20px}
-th{background:#175b9c;color:white;text-align:left;padding:12px}
-td{border-bottom:1px solid #e1e5eb;padding:10px}
-td input{border:0;padding:6px}
-.total{text-align:right;font-size:25px;font-weight:bold;color:#175b9c;margin-top:25px}
-button{background:#175b9c;color:white;border:0;border-radius:6px;padding:12px 20px;margin-top:20px;cursor:pointer}
-button:hover{background:#104677}
-.note{font-size:13px;color:#667085}
-.section-title{margin-top:30px;border-bottom:2px solid #e1e5eb;padding-bottom:8px}
-@media(max-width:600px){.grid{grid-template-columns:1fr}.container{padding:20px}body{padding:10px}}
-@media print{
-textarea::placeholder {
-  color: transparent;
+* {
+  box-sizing: border-box;
 }
+
+body {
+  font-family: Arial, sans-serif;
+  background: #eef2f7;
+  color: #253247;
+  margin: 0;
+  padding: 25px;
+}
+
+.container {
+  max-width: 850px;
+  margin: auto;
+  background: white;
+  padding: 35px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px #0001;
+}
+
+h1 {
+  color: #175b9c;
+  margin-bottom: 8px;
+}
+
+.subtitle {
+  color: #667085;
+  margin-bottom: 30px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+label {
+  display: block;
+  font-weight: bold;
+  margin: 15px 0 6px;
+}
+
+input, textarea {
+  width: 100%;
+  padding: 11px;
+  border: 1px solid #ccd5e0;
+  border-radius: 6px;
+  font: inherit;
+}
+
 textarea {
-  resize: none;
+  resize: vertical;
 }
-body{background:white;padding:0}
-.container{box-shadow:none;padding:5px;border-radius:0}
-button,.note{display:none}
-input,textarea{border:0;padding:0;background:transparent}
-th{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+
+.section-title {
+  margin-top: 30px;
+  border-bottom: 2px solid #e1e5eb;
+  padding-bottom: 8px;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+th {
+  background: #175b9c;
+  color: white;
+  text-align: left;
+  padding: 12px;
+}
+
+td {
+  border-bottom: 1px solid #e1e5eb;
+  padding: 10px;
+}
+
+td input {
+  border: 1px solid #e1e5eb;
+  padding: 8px;
+}
+
+.amount {
+  white-space: nowrap;
+  font-weight: bold;
+}
+
+.total {
+  text-align: right;
+  font-size: 25px;
+  font-weight: bold;
+  color: #175b9c;
+  margin-top: 25px;
+}
+
+button {
+  background: #175b9c;
+  color: white;
+  border: 0;
+  border-radius: 6px;
+  padding: 12px 20px;
+  margin-top: 20px;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #104677;
+}
+
+.delete-btn {
+  background: #c0392b;
+  padding: 9px 12px;
+  margin-top: 0;
+}
+
+.delete-btn:hover {
+  background: #922b21;
+}
+
+.note {
+  font-size: 13px;
+  color: #667085;
+}
+
+@media (max-width: 600px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .container {
+    padding: 20px;
+  }
+
+  body {
+    padding: 10px;
+  }
+
+  table {
+    min-width: 600px;
+  }
+}
+
+@media print {
+  @page {
+    margin: 15mm;
+  }
+
+  body {
+    background: white;
+    padding: 0;
+  }
+
+  .container {
+    box-shadow: none;
+    padding: 0;
+    border-radius: 0;
+  }
+
+  button,
+  .note,
+  .actions {
+    display: none !important;
+  }
+
+  input,
+  textarea {
+    border: 0;
+    padding: 0;
+    background: transparent;
+    color: #253247;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: transparent;
+  }
+
+  textarea {
+    resize: none;
+  }
+
+  .table-wrap {
+    overflow: visible;
+  }
+
+  table {
+    min-width: 0;
+  }
+
+  th {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  tr {
+    break-inside: avoid;
+  }
 }
 </style>
 </head>
+
 <body>
+
 <div class="container">
+
 <h1>QUOTATION</h1>
 <p class="subtitle">Professional Service Quotation</p>
 
 <div class="grid">
-<div>
-<label>Company Name</label>
-<input placeholder="ABC Cleaning Services">
-<label>Company Email</label>
-<input type="email" placeholder="contact@example.com">
-<label>Company Phone</label>
-<input placeholder="+1 555 123 4567">
-</div>
-<div>
-<label>Quotation Number</label>
-<input id="quoteNumber" value="QT-001">
-<label>Quotation Date</label>
-<input id="quoteDate" type="date">
-<label>Valid Until</label>
-<input id="validUntil" type="date">
-</div>
+
+  <div>
+    <label>Company Name</label>
+    <input id="company"
+      placeholder="ABC Cleaning Services">
+
+    <label>Company Email</label>
+    <input id="companyEmail"
+      type="email"
+      placeholder="contact@example.com">
+
+    <label>Company Phone</label>
+    <input id="companyPhone"
+      placeholder="+1 555 123 4567">
+  </div>
+
+  <div>
+    <label>Quotation Number</label>
+    <input id="quoteNumber" value="QT-001">
+
+    <label>Quotation Date</label>
+    <input id="quoteDate" type="date">
+
+    <label>Valid Until</label>
+    <input id="validUntil" type="date">
+  </div>
+
 </div>
 
 <h2 class="section-title">Bill To</h2>
+
 <div class="grid">
-<div>
-<label>Customer Name</label>
-<input placeholder="Customer Name">
-</div>
-<div>
-<label>Customer Email</label>
-<input type="email" placeholder="customer@example.com">
-</div>
+
+  <div>
+    <label>Customer Name</label>
+    <input id="customer"
+      placeholder="Customer Name">
+  </div>
+
+  <div>
+    <label>Customer Email</label>
+    <input id="customerEmail"
+      type="email"
+      placeholder="customer@example.com">
+  </div>
+
 </div>
 
 <h2 class="section-title">Service Details</h2>
+
+<div class="table-wrap">
 <table>
+
 <thead>
 <tr>
-<th>Service Description</th>
-<th>Qty</th>
-<th>Unit Price (USD)</th>
-<th>Amount</th>
+  <th>Service Description</th>
+  <th>Qty</th>
+  <th>Unit Price (USD)</th>
+  <th>Amount</th>
+  <th class="actions">Action</th>
 </tr>
 </thead>
+
 <tbody id="items">
+
 <tr>
-<td><input placeholder="Office cleaning"></td>
-<td><input type="number" min="0" value="1" class="qty"></td>
-<td><input type="number" min="0" step="0.01" value="100" class="price"></td>
-<td class="amount">$100.00</td>
+  <td>
+    <input placeholder="Office cleaning">
+  </td>
+
+  <td>
+    <input type="number"
+      min="0"
+      value="1"
+      class="qty">
+  </td>
+
+  <td>
+    <input type="number"
+      min="0"
+      step="0.01"
+      value="100"
+      class="price">
+  </td>
+
+  <td class="amount">$100.00</td>
+
+  <td class="actions">
+    <button type="button"
+      class="delete-btn"
+      onclick="removeItem(this)">
+      Delete
+    </button>
+  </td>
 </tr>
+
 </tbody>
+
 </table>
+</div>
 
-<button onclick="addItem()">+ Add Service</button>
+<button type="button" onclick="addItem()">
+  + Add Service
+</button>
 
-<div class="total" id="total">Total: $100.00</div>
+<div class="total" id="total">
+  Total: $100.00
+</div>
 
 <h2 class="section-title">Notes & Terms</h2>
-<textarea rows="4" placeholder="Payment terms, scope of work, exclusions, or additional notes."></textarea>
 
-<p class="note">Review all information before sending this quotation to your customer.</p>
-<button onclick="window.print()">Print / Save as PDF</button>
+<textarea id="notes"
+  rows="4"
+  placeholder="Payment terms, scope of work, exclusions, or additional notes."></textarea>
+
+<p class="note">
+Review all information before sending this quotation
+to your customer.
+</p>
+
+<button type="button" onclick="printQuotation()">
+  Print / Save as PDF
+</button>
+
 </div>
 
 <script>
-const today = new Date();
-const dateString = [
-today.getFullYear(),
-String(today.getMonth()+1).padStart(2,"0"),
-String(today.getDate()).padStart(2,"0")
-].join("-");
-document.getElementById("quoteDate").value = dateString;
-  
-const quoteDate = document.getElementById("quoteDate");
-const validUntil = document.getElementById("validUntil");
 
-function updateValidUntil() {
-  if (!quoteDate.value) return;
+// Format money
+function money(value) {
+  return Number(value).toLocaleString("en-US", {
+    style: "currency",
+    currency: "USD"
+  });
+}
 
-  const date = new Date(quoteDate.value + "T12:00:00");
-  date.setDate(date.getDate() + 30);
+// Calculate total
+function calculate() {
+  let total = 0;
 
-  const expiry = [
+  document.querySelectorAll("#items tr").forEach(row => {
+    const qtyInput = row.querySelector(".qty");
+    const priceInput = row.querySelector(".price");
+
+    const qty = Math.max(
+      0,
+      Number(qtyInput.value) || 0
+    );
+
+    const price = Math.max(
+      0,
+      Number(priceInput.value) || 0
+    );
+
+    const amount = qty * price;
+
+    row.querySelector(".amount").textContent =
+      money(amount);
+
+    total += amount;
+  });
+
+  document.getElementById("total").textContent =
+    "Total: " + money(total);
+}
+
+// Add service
+function addItem() {
+  const row = document.createElement("tr");
+
+  row.innerHTML = `
+    <td>
+      <input placeholder="Service description">
+    </td>
+
+    <td>
+      <input type="number"
+        min="0"
+        value="1"
+        class="qty">
+    </td>
+
+    <td>
+      <input type="number"
+        min="0"
+        step="0.01"
+        value="0"
+        class="price">
+    </td>
+
+    <td class="amount">$0.00</td>
+
+    <td class="actions">
+      <button type="button"
+        class="delete-btn"
+        onclick="removeItem(this)">
+        Delete
+      </button>
+    </td>
+  `;
+
+  document.getElementById("items").appendChild(row);
+
+  calculate();
+}
+
+// Delete service
+function removeItem(button) {
+  const row = button.closest("tr");
+
+  if (row) {
+    row.remove();
+    calculate();
+  }
+}
+
+// Date formatting
+function formatDate(date) {
+  return [
     date.getFullYear(),
     String(date.getMonth() + 1).padStart(2, "0"),
     String(date.getDate()).padStart(2, "0")
   ].join("-");
+}
+
+// Initialize quotation date
+const today = new Date();
+
+const quoteDate =
+  document.getElementById("quoteDate");
+
+const validUntil =
+  document.getElementById("validUntil");
+
+quoteDate.value = formatDate(today);
+
+// Automatically set 30-day validity
+function updateValidUntil() {
+  if (!quoteDate.value) {
+    validUntil.value = "";
+    validUntil.min = "";
+    return;
+  }
+
+  const date = new Date(
+    quoteDate.value + "T12:00:00"
+  );
+
+  date.setDate(date.getDate() + 30);
 
   validUntil.min = quoteDate.value;
-  validUntil.value = expiry;
+  validUntil.value = formatDate(date);
 }
 
-quoteDate.addEventListener("change", updateValidUntil);
+// Prevent validity date before quotation date
+validUntil.addEventListener("change", function() {
+  if (
+    quoteDate.value &&
+    validUntil.value &&
+    validUntil.value < quoteDate.value
+  ) {
+    alert(
+      "Valid Until cannot be earlier than Quotation Date."
+    );
+
+    updateValidUntil();
+  }
+});
+
+quoteDate.addEventListener(
+  "change",
+  updateValidUntil
+);
+
 updateValidUntil();
-function money(value){
-return Number(value).toLocaleString("en-US",{
-style:"currency",currency:"USD"
-});
+
+// Recalculate when inputs change
+document.getElementById("items")
+  .addEventListener("input", calculate);
+
+// Print quotation
+function printQuotation() {
+  calculate();
+  window.print();
 }
 
-function calculate(){
-let total=0;
-document.querySelectorAll("#items tr").forEach(row=>{
-const qty=Math.max(0,Number(row.querySelector(".qty").value)||0);
-const price=Math.max(0,Number(row.querySelector(".price").value)||0);
-const amount=qty*price;
-row.querySelector(".amount").textContent=money(amount);
-total+=amount;
-});
-document.getElementById("total").textContent="Total: "+money(total);
-}
-
-function addItem(){
-const row=document.createElement("tr");
-row.innerHTML=`
-<td><input placeholder="Service description"></td>
-<td><input type="number" min="0" value="1" class="qty"></td>
-<td><input type="number" min="0" step="0.01" value="0" class="price"></td>
-<td class="amount">$0.00</td>`;
-document.getElementById("items").appendChild(row);
+// Initial calculation
 calculate();
-}
 
-document.getElementById("items").addEventListener("input",calculate);
-calculate();
 </script>
+
 </body>
 </html>
