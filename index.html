@@ -52,6 +52,9 @@ body{padding:10px}
 table{min-width:650px}
 }
 @media print{
+  .print-hidden-empty {
+  display: none !important;
+}
 @page{margin:15mm}
 body{background:white;padding:0}
 .container{box-shadow:none;padding:0;border-radius:0}
@@ -575,11 +578,30 @@ saveData();
 alert("Description added to quotation.");
 }
 
-function printQuotation(){
-calculate();
-resizeAllDescriptions();
-saveData();
-window.print();
+
+function printQuotation() {
+  calculate();
+  resizeAllDescriptions();
+  saveData();
+
+  document.querySelectorAll(".print-hidden-empty")
+    .forEach(el => el.classList.remove("print-hidden-empty"));
+
+  document.querySelectorAll(".container label").forEach(label => {
+    const field = label.nextElementSibling;
+
+    if (
+      field &&
+      (field.matches("input, textarea")) &&
+      !field.value.trim() &&
+      !label.closest(".panel")
+    ) {
+      label.classList.add("print-hidden-empty");
+      field.classList.add("print-hidden-empty");
+    }
+  });
+
+  window.print();
 }
 
 quoteDate.value=formatDate(new Date());
