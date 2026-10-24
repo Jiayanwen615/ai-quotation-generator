@@ -2,108 +2,145 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>AI Quotation Generator</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f3f6fa;
-      margin: 0;
-      padding: 25px;
-      color: #243247;
-    }
-    .container {
-      max-width: 760px;
-      margin: auto;
-      background: white;
-      padding: 28px;
-      border-radius: 12px;
-      box-shadow: 0 4px 18px #0001;
-    }
-    h1 { color: #1763aa; }
-    label {
-      display: block;
-      margin-top: 16px;
-      font-weight: bold;
-    }
-    input, textarea {
-      box-sizing: border-box;
-      width: 100%;
-      padding: 11px;
-      margin-top: 6px;
-      border: 1px solid #ccd4df;
-      border-radius: 6px;
-      font: inherit;
-    }
-    button {
-      background: #1763aa;
-      color: white;
-      border: 0;
-      padding: 12px 20px;
-      border-radius: 6px;
-      cursor: pointer;
-      margin-top: 20px;
-    }
-    .total {
-      font-size: 24px;
-      font-weight: bold;
-      margin-top: 24px;
-    }
-    .note { color: #667085; font-size: 13px; }
-    @media print {
-      body { background: white; padding: 0; }
-      .container { box-shadow: none; }
-      button, .note { display: none; }
-      input, textarea { border: none; padding-left: 0; }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Professional Quotation Generator</title>
+<style>
+*{box-sizing:border-box}
+body{font-family:Arial,sans-serif;background:#eef2f7;margin:0;padding:25px;color:#253247}
+.container{max-width:850px;margin:auto;background:white;padding:35px;border-radius:12px;box-shadow:0 4px 20px #0001}
+h1{color:#175b9c;margin-bottom:8px}
+.subtitle{color:#667085;margin-bottom:30px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+label{display:block;font-weight:bold;margin:15px 0 6px}
+input,textarea{width:100%;padding:11px;border:1px solid #ccd5e0;border-radius:6px;font:inherit}
+textarea{resize:vertical}
+table{width:100%;border-collapse:collapse;margin-top:20px}
+th{background:#175b9c;color:white;text-align:left;padding:12px}
+td{border-bottom:1px solid #e1e5eb;padding:10px}
+td input{border:0;padding:6px}
+.total{text-align:right;font-size:25px;font-weight:bold;color:#175b9c;margin-top:25px}
+button{background:#175b9c;color:white;border:0;border-radius:6px;padding:12px 20px;margin-top:20px;cursor:pointer}
+button:hover{background:#104677}
+.note{font-size:13px;color:#667085}
+.section-title{margin-top:30px;border-bottom:2px solid #e1e5eb;padding-bottom:8px}
+@media(max-width:600px){.grid{grid-template-columns:1fr}.container{padding:20px}body{padding:10px}}
+@media print{
+body{background:white;padding:0}
+.container{box-shadow:none;padding:5px;border-radius:0}
+button,.note{display:none}
+input,textarea{border:0;padding:0;background:transparent}
+th{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
 </head>
 <body>
-  <div class="container">
-    <h1>Quotation Generator</h1>
-    <p>Create a professional quotation in minutes.</p>
+<div class="container">
+<h1>QUOTATION</h1>
+<p class="subtitle">Professional Service Quotation</p>
 
-    <label>Your Company Name</label>
-    <input id="company" placeholder="ABC Cleaning Services">
+<div class="grid">
+<div>
+<label>Company Name</label>
+<input placeholder="ABC Cleaning Services">
+<label>Company Email</label>
+<input type="email" placeholder="contact@example.com">
+<label>Company Phone</label>
+<input placeholder="+1 555 123 4567">
+</div>
+<div>
+<label>Quotation Number</label>
+<input id="quoteNumber" value="QT-001">
+<label>Quotation Date</label>
+<input id="quoteDate" type="date">
+<label>Valid Until</label>
+<input id="validUntil" type="date">
+</div>
+</div>
 
-    <label>Customer Name</label>
-    <input id="customer" placeholder="Customer or company name">
+<h2 class="section-title">Bill To</h2>
+<div class="grid">
+<div>
+<label>Customer Name</label>
+<input placeholder="Customer Name">
+</div>
+<div>
+<label>Customer Email</label>
+<input type="email" placeholder="customer@example.com">
+</div>
+</div>
 
-    <label>Service Description</label>
-    <textarea id="service" rows="4"
-      placeholder="Weekly office cleaning service"></textarea>
+<h2 class="section-title">Service Details</h2>
+<table>
+<thead>
+<tr>
+<th>Service Description</th>
+<th>Qty</th>
+<th>Unit Price (USD)</th>
+<th>Amount</th>
+</tr>
+</thead>
+<tbody id="items">
+<tr>
+<td><input placeholder="Office cleaning"></td>
+<td><input type="number" min="0" value="1" class="qty"></td>
+<td><input type="number" min="0" step="0.01" value="100" class="price"></td>
+<td class="amount">$100.00</td>
+</tr>
+</tbody>
+</table>
 
-    <label>Quantity</label>
-    <input id="quantity" type="number" min="0" value="1">
+<button onclick="addItem()">+ Add Service</button>
 
-    <label>Unit Price (USD)</label>
-    <input id="price" type="number" min="0" step="0.01" value="100">
+<div class="total" id="total">Total: $100.00</div>
 
-    <div class="total" id="total">Total: $100.00</div>
+<h2 class="section-title">Notes & Terms</h2>
+<textarea rows="4" placeholder="Payment terms, scope of work, exclusions, or additional notes."></textarea>
 
-    <button onclick="window.print()">Print / Save as PDF</button>
-    <p class="note">All calculations run in your browser.</p>
-  </div>
+<p class="note">Review all information before sending this quotation to your customer.</p>
+<button onclick="window.print()">Print / Save as PDF</button>
+</div>
 
-  <script>
-    const quantity = document.getElementById("quantity");
-    const price = document.getElementById("price");
-    const total = document.getElementById("total");
+<script>
+const today = new Date();
+const dateString = [
+today.getFullYear(),
+String(today.getMonth()+1).padStart(2,"0"),
+String(today.getDate()).padStart(2,"0")
+].join("-");
+document.getElementById("quoteDate").value = dateString;
 
-    function calculateTotal() {
-      const q = Math.max(0, Number(quantity.value) || 0);
-      const p = Math.max(0, Number(price.value) || 0);
-      const amount = q * p;
-      total.textContent = "Total: " +
-        amount.toLocaleString("en-US", {
-          style: "currency",
-          currency: "USD"
-        });
-    }
+function money(value){
+return Number(value).toLocaleString("en-US",{
+style:"currency",currency:"USD"
+});
+}
 
-    quantity.addEventListener("input", calculateTotal);
-    price.addEventListener("input", calculateTotal);
-  </script>
+function calculate(){
+let total=0;
+document.querySelectorAll("#items tr").forEach(row=>{
+const qty=Math.max(0,Number(row.querySelector(".qty").value)||0);
+const price=Math.max(0,Number(row.querySelector(".price").value)||0);
+const amount=qty*price;
+row.querySelector(".amount").textContent=money(amount);
+total+=amount;
+});
+document.getElementById("total").textContent="Total: "+money(total);
+}
+
+function addItem(){
+const row=document.createElement("tr");
+row.innerHTML=`
+<td><input placeholder="Service description"></td>
+<td><input type="number" min="0" value="1" class="qty"></td>
+<td><input type="number" min="0" step="0.01" value="0" class="price"></td>
+<td class="amount">$0.00</td>`;
+document.getElementById("items").appendChild(row);
+calculate();
+}
+
+document.getElementById("items").addEventListener("input",calculate);
+calculate();
+</script>
 </body>
 </html>
