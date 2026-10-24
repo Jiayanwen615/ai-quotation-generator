@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Cleaning Quote & Profit Calculator V8</title>
+<title>Cleaning Quote & Profit Calculator V10</title>
 <style>
 *{box-sizing:border-box}
 body{font-family:Arial,sans-serif;background:#eef2f7;color:#253247;margin:0;padding:25px}
@@ -52,13 +52,11 @@ body{padding:10px}
 table{min-width:650px}
 }
 @media print{
-  .print-hidden-empty {
-  display: none !important;
-}
 @page{margin:15mm}
 body{background:white;padding:0}
 .container{box-shadow:none;padding:0;border-radius:0}
 button,.note,.actions,.save-status,.panel{display:none!important}
+.print-hidden-empty{display:none!important}
 input,textarea,select{border:0!important;padding:0!important;background:transparent;color:#253247}
 input::placeholder,textarea::placeholder{color:transparent}
 textarea{resize:none!important;overflow:visible!important}
@@ -77,31 +75,24 @@ th:nth-child(4){width:18%}
 <div class="container">
 
 <h1>QUOTATION</h1>
-
 <p class="subtitle">Professional Cleaning Service Quotation</p>
 
 <div class="grid">
 <div>
 <label>Company Name</label>
 <input id="company" placeholder="ABC Cleaning Services">
-
 <label>Company Email</label>
 <input id="companyEmail" type="email" placeholder="contact@example.com">
-
 <label>Company Phone</label>
 <input id="companyPhone" placeholder="+1 555 123 4567">
 </div>
-
 <div>
 <label>Quotation Number</label>
 <input id="quoteNumber" value="QT-001">
-
 <label>Quotation Date</label>
 <input id="quoteDate" type="date">
-
 <label>Valid Until</label>
 <input id="validUntil" type="date">
-
 <label>Quotation Currency</label>
 <select id="currency">
 <option value="USD">USD - US Dollar</option>
@@ -154,86 +145,34 @@ th:nth-child(4){width:18%}
 <button type="button" onclick="addItem()">+ Add Service</button>
 <div class="total" id="total">Total: USD 100.00</div>
 
-<!-- PROFIT CALCULATOR -->
 <div class="panel">
 <h2>Cleaning Cost & Profit Calculator</h2>
 <p class="note">
 Estimate the cost of one cleaning visit or one job.
 Enter costs in the selected quotation currency.
 </p>
-
 <div class="grid">
-<div>
-<label>Number of Workers</label>
-<input id="workers" type="number" min="0" step="1" value="2">
-</div>
-<div>
-<label>Hours per Worker</label>
-<input id="hours" type="number" min="0" step="0.25" value="4">
-</div>
-<div>
-<label>Hourly Labor Cost</label>
-<input id="laborRate" type="number" min="0" step="0.01" value="20">
-</div>
-<div>
-<label>Payroll Burden (%)</label>
-<input id="payrollBurden" type="number" min="0" step="0.1" value="0">
-</div>
-<div>
-<label>Cleaning Supplies Cost</label>
-<input id="supplies" type="number" min="0" step="0.01" value="20">
-</div>
-<div>
-<label>Travel / Parking Cost</label>
-<input id="travel" type="number" min="0" step="0.01" value="10">
-</div>
-<div>
-<label>Other Overhead Cost</label>
-<input id="overhead" type="number" min="0" step="0.01" value="10">
-</div>
-<div>
-<label>Payment Processing Fee (%)</label>
-<input id="processingFee" type="number" min="0" max="99" step="0.1" value="0">
-</div>
-<div>
-<label>Target Gross Margin (%)</label>
-<input id="targetMargin" type="number" min="0" max="99" step="1" value="35">
-</div>
+<div><label>Number of Workers</label><input id="workers" type="number" min="0" step="1" value="2"></div>
+<div><label>Hours per Worker</label><input id="hours" type="number" min="0" step="0.25" value="4"></div>
+<div><label>Hourly Labor Cost</label><input id="laborRate" type="number" min="0" step="0.01" value="20"></div>
+<div><label>Payroll Burden (%)</label><input id="payrollBurden" type="number" min="0" step="0.1" value="0"></div>
+<div><label>Cleaning Supplies Cost</label><input id="supplies" type="number" min="0" step="0.01" value="20"></div>
+<div><label>Travel / Parking Cost</label><input id="travel" type="number" min="0" step="0.01" value="10"></div>
+<div><label>Other Overhead Cost</label><input id="overhead" type="number" min="0" step="0.01" value="10"></div>
+<div><label>Payment Processing Fee (%)</label><input id="processingFee" type="number" min="0" max="99" step="0.1" value="0"></div>
+<div><label>Target Gross Margin (%)</label><input id="targetMargin" type="number" min="0" max="99" step="1" value="35"></div>
 </div>
 
 <div class="profit-result">
-<div class="result-line">
-<span>Labor Cost</span>
-<strong id="laborCostResult">USD 160.00</strong>
+<div class="result-line"><span>Labor Cost</span><strong id="laborCostResult">USD 160.00</strong></div>
+<div class="result-line"><span>Payroll Burden Cost</span><strong id="burdenResult">USD 0.00</strong></div>
+<div class="result-line"><span>Total Estimated Cost</span><strong id="costResult">USD 200.00</strong></div>
+<div class="result-line"><span>Expected Processing Fee</span><strong id="feeResult">USD 0.00</strong></div>
+<div class="result-line"><span>Estimated Gross Profit</span><strong id="profitResult">USD 107.69</strong></div>
+<div class="result-line suggested"><span>Suggested Price</span><strong id="suggestedPrice">USD 307.69</strong></div>
 </div>
-<div class="result-line">
-<span>Payroll Burden Cost</span>
-<strong id="burdenResult">USD 0.00</strong>
-</div>
-<div class="result-line">
-<span>Total Estimated Cost</span>
-<strong id="costResult">USD 200.00</strong>
-</div>
-<div class="result-line">
-<span>Expected Processing Fee</span>
-<strong id="feeResult">USD 0.00</strong>
-</div>
-<div class="result-line">
-<span>Estimated Gross Profit</span>
-<strong id="profitResult">USD 107.69</strong>
-</div>
-<div class="result-line suggested">
-<span>Suggested Price</span>
-<strong id="suggestedPrice">USD 307.69</strong>
-</div>
-</div>
-
 <p class="warning" id="profitWarning"></p>
-
-<button type="button" class="secondary-btn" onclick="applySuggestedPrice()">
-Use Suggested Price in Quotation
-</button>
-
+<button type="button" class="secondary-btn" onclick="applySuggestedPrice()">Use Suggested Price in Quotation</button>
 <p class="note">
 This is an estimate, not a market-price guarantee.
 Gross margin is calculated after entered costs and payment fees.
@@ -241,40 +180,32 @@ Taxes and any unentered expenses are excluded.
 </p>
 </div>
 
-<!-- DESCRIPTION GENERATOR -->
 <div class="panel">
 <h2>AI Service Description</h2>
 <p class="note">Free template-based assistant. No AI API is connected yet.</p>
-
 <label>Briefly describe the service</label>
 <textarea id="aiInput" rows="3" placeholder="Office cleaning, 200 sqm, twice a week"></textarea>
-
 <button type="button" onclick="generateDescription()">Generate Description</button>
-
 <div class="result">
 <label>Generated Description</label>
 <textarea id="aiOutput" rows="5" placeholder="Your professional English description will appear here."></textarea>
 </div>
-
-<button type="button" class="secondary-btn" onclick="useDescription()">
-Use in Quotation
-</button>
-
+<button type="button" class="secondary-btn" onclick="useDescription()">Use in Quotation</button>
 <p class="note">Review generated text before sending it to a customer.</p>
 </div>
 
+<div id="notesSection">
 <h2 class="section-title">Notes & Terms</h2>
 <textarea id="notes" rows="4" placeholder="Payment terms, scope of work, exclusions, or additional notes."></textarea>
+</div>
 
 <p class="save-status" id="saveStatus">Ready to save</p>
 <p class="note">Data is saved in this browser only.</p>
-
 <button type="button" onclick="printQuotation()">Print / Save as PDF</button>
 </div>
 
 <script>
 const STORAGE_KEY="ai_quotation_generator_v4";
-
 const fieldIds=[
 "company","companyEmail","companyPhone",
 "quoteNumber","quoteDate","validUntil",
@@ -299,16 +230,13 @@ currencyDisplay:"code"
 
 function calculate(){
 let total=0;
-
 document.querySelectorAll("#items tr").forEach(row=>{
 const qty=Math.max(0,Number(row.querySelector(".qty").value)||0);
 const price=Math.max(0,Number(row.querySelector(".price").value)||0);
 const amount=qty*price;
-
 row.querySelector(".amount").textContent=money(amount);
 total+=amount;
 });
-
 document.getElementById("total").textContent="Total: "+money(total);
 document.getElementById("unitPriceHeading").textContent=
 "Unit Price ("+currencySelect.value+")";
@@ -318,30 +246,22 @@ function resizeDescription(element){
 element.style.height="auto";
 element.style.height=element.scrollHeight+"px";
 }
-
 function resizeAllDescriptions(){
 document.querySelectorAll(".description").forEach(resizeDescription);
 }
-
 function createRow(description="",qty="1",price="0"){
 const row=document.createElement("tr");
-
 row.innerHTML=`
 <td><textarea class="description" rows="3" placeholder="Service description"></textarea></td>
 <td><input type="number" min="0" class="qty"></td>
 <td><input type="number" min="0" step="0.01" class="price"></td>
 <td class="amount"></td>
-<td class="actions">
-<button type="button" class="delete-btn" onclick="removeItem(this)">Delete</button>
-</td>`;
-
+<td class="actions"><button type="button" class="delete-btn" onclick="removeItem(this)">Delete</button></td>`;
 row.querySelector(".description").value=description;
 row.querySelector(".qty").value=qty;
 row.querySelector(".price").value=price;
-
 return row;
 }
-
 function addItem(){
 const row=createRow();
 document.getElementById("items").appendChild(row);
@@ -349,16 +269,10 @@ resizeDescription(row.querySelector(".description"));
 calculate();
 saveData();
 }
-
 function removeItem(button){
 const row=button.closest("tr");
-if(row){
-row.remove();
-calculate();
-saveData();
+if(row){row.remove();calculate();saveData();}
 }
-}
-
 function formatDate(date){
 return [
 date.getFullYear(),
@@ -366,7 +280,6 @@ String(date.getMonth()+1).padStart(2,"0"),
 String(date.getDate()).padStart(2,"0")
 ].join("-");
 }
-
 function updateValidUntil(){
 if(!quoteDate.value){
 validUntil.value="";
@@ -378,12 +291,10 @@ date.setDate(date.getDate()+30);
 validUntil.min=quoteDate.value;
 validUntil.value=formatDate(date);
 }
-
 function nonNegative(id){
 const value=Number(document.getElementById(id).value);
 return Number.isFinite(value)?Math.max(0,value):0;
 }
-
 let currentSuggestedPrice=null;
 
 function calculateProfit(){
@@ -391,19 +302,15 @@ const workers=nonNegative("workers");
 const hours=nonNegative("hours");
 const rate=nonNegative("laborRate");
 const burdenPercent=nonNegative("payrollBurden");
-
 const laborCost=workers*hours*rate;
 const burdenCost=laborCost*burdenPercent/100;
-
 const totalCost=
 laborCost+burdenCost+
 nonNegative("supplies")+
 nonNegative("travel")+
 nonNegative("overhead");
-
 const margin=nonNegative("targetMargin")/100;
 const fee=nonNegative("processingFee")/100;
-
 const denominator=1-margin-fee;
 const warning=document.getElementById("profitWarning");
 
@@ -423,91 +330,62 @@ return;
 const suggested=totalCost/denominator;
 const processingCost=suggested*fee;
 const profit=suggested-totalCost-processingCost;
-
 currentSuggestedPrice=suggested;
-
 document.getElementById("feeResult").textContent=money(processingCost);
 document.getElementById("profitResult").textContent=money(profit);
 document.getElementById("suggestedPrice").textContent=money(suggested);
-
 warning.textContent=totalCost===0?
 "Enter your actual costs before using the suggested price.":"";
 }
 
 function applySuggestedPrice(){
 calculateProfit();
-
 if(currentSuggestedPrice===null||currentSuggestedPrice<=0){
 alert("Please enter valid costs and profit settings first.");
 return;
 }
-
-const rows=document.querySelectorAll("#items tr");
-
-if(rows.length===0){
-const row=createRow("Cleaning service","1","0");
-document.getElementById("items").appendChild(row);
+if(document.querySelectorAll("#items tr").length===0){
+document.getElementById("items").appendChild(
+createRow("Cleaning service","1","0")
+);
 }
-
 const first=document.querySelector("#items tr");
-const priceInput=first.querySelector(".price");
-const qtyInput=first.querySelector(".qty");
-
 const roundedPrice=Math.ceil(currentSuggestedPrice*100)/100;
-
-qtyInput.value="1";
-priceInput.value=roundedPrice.toFixed(2);
-
+first.querySelector(".qty").value="1";
+first.querySelector(".price").value=roundedPrice.toFixed(2);
 calculate();
 saveData();
-
-alert(
-"Suggested price applied to the first service row. "+
-"Quantity was set to 1. Please review all other rows before sending."
-);
+alert("Suggested price applied to the first service row. Quantity set to 1. Review other rows.");
 }
 
 function collectData(){
 const fields={};
-
 fieldIds.forEach(id=>{
 fields[id]=document.getElementById(id).value;
 });
-
-const items=Array.from(
-document.querySelectorAll("#items tr")
-).map(row=>({
+const items=Array.from(document.querySelectorAll("#items tr")).map(row=>({
 description:row.querySelector(".description").value,
 qty:row.querySelector(".qty").value,
 price:row.querySelector(".price").value
 }));
-
 return {fields,items};
 }
-
 function saveData(){
 try{
 localStorage.setItem(STORAGE_KEY,JSON.stringify(collectData()));
-document.getElementById("saveStatus").textContent=
-"Saved automatically in this browser";
+document.getElementById("saveStatus").textContent="Saved automatically in this browser";
 }catch(error){
-document.getElementById("saveStatus").textContent=
-"Auto-save unavailable. Please export your quotation.";
+document.getElementById("saveStatus").textContent="Auto-save unavailable. Please export your quotation.";
 }
 }
-
 function loadData(){
 let saved;
-
 try{
 const raw=localStorage.getItem(STORAGE_KEY);
 if(!raw)return false;
 saved=JSON.parse(raw);
 if(!saved||typeof saved!=="object")return false;
-}catch(error){
-return false;
-}
-
+}catch(error){return false;}
 if(saved.fields&&typeof saved.fields==="object"){
 fieldIds.forEach(id=>{
 if(typeof saved.fields[id]==="string"){
@@ -515,11 +393,9 @@ document.getElementById(id).value=saved.fields[id];
 }
 });
 }
-
 if(Array.isArray(saved.items)){
 const tbody=document.getElementById("items");
 tbody.replaceChildren();
-
 saved.items.forEach(item=>{
 if(item&&typeof item==="object"){
 tbody.appendChild(createRow(
@@ -530,7 +406,6 @@ String(item.price??"0")
 }
 });
 }
-
 validUntil.min=quoteDate.value||"";
 calculate();
 return true;
@@ -538,32 +413,23 @@ return true;
 
 function generateDescription(){
 const input=document.getElementById("aiInput").value.trim();
-
 if(!input){
 alert("Please enter a short service description first.");
 return;
 }
-
 const clean=input.replace(/\s+/g," ").replace(/[.!?]+$/,"");
-
-const output=
+document.getElementById("aiOutput").value=
 "Professional service quotation for "+clean+
 ". The exact scope of work, schedule, and service requirements are subject to customer confirmation.";
-
-document.getElementById("aiOutput").value=output;
 saveData();
 }
-
 function useDescription(){
 const text=document.getElementById("aiOutput").value.trim();
-
 if(!text){
 alert("Please generate or enter a description first.");
 return;
 }
-
 const first=document.querySelector("#items tr .description");
-
 if(first){
 first.value=text;
 resizeDescription(first);
@@ -572,68 +438,71 @@ const row=createRow(text,"1","0");
 document.getElementById("items").appendChild(row);
 resizeDescription(row.querySelector(".description"));
 }
-
 calculate();
 saveData();
 alert("Description added to quotation.");
 }
 
+function preparePrint(){
+document.querySelectorAll(".print-hidden-empty").forEach(el=>{
+el.classList.remove("print-hidden-empty");
+});
 
-function printQuotation() {
-  calculate();
-  resizeAllDescriptions();
-  saveData();
+document.querySelectorAll(".container label").forEach(label=>{
+if(label.closest(".panel"))return;
 
-  document.querySelectorAll(".print-hidden-empty")
-    .forEach(el => el.classList.remove("print-hidden-empty"));
+const field=label.nextElementSibling;
+if(!field||!field.matches("input,textarea,select"))return;
 
-  document.querySelectorAll(".container label").forEach(label => {
-    const field = label.nextElementSibling;
-
-    if (
-      field &&
-      (field.matches("input, textarea")) &&
-      !field.value.trim() &&
-      !label.closest(".panel")
-    ) {
-      label.classList.add("print-hidden-empty");
-      field.classList.add("print-hidden-empty");
-    }
-  });
-
-  window.print();
+if(!String(field.value||"").trim()){
+label.classList.add("print-hidden-empty");
+field.classList.add("print-hidden-empty");
 }
+});
+
+const notes=document.getElementById("notes");
+if(!notes.value.trim()){
+document.getElementById("notesSection").classList.add("print-hidden-empty");
+}
+}
+
+function printQuotation(){
+calculate();
+resizeAllDescriptions();
+saveData();
+preparePrint();
+window.print();
+}
+
+window.addEventListener("afterprint",()=>{
+document.querySelectorAll(".print-hidden-empty").forEach(el=>{
+el.classList.remove("print-hidden-empty");
+});
+});
 
 quoteDate.value=formatDate(new Date());
 updateValidUntil();
-
 const restored=loadData();
-
 if(restored){
-document.getElementById("saveStatus").textContent=
-"Previous quotation restored";
+document.getElementById("saveStatus").textContent="Previous quotation restored";
 }
 
 quoteDate.addEventListener("change",()=>{
 updateValidUntil();
 saveData();
 });
-
 validUntil.addEventListener("change",()=>{
-if(quoteDate.value&&validUntil.value&&
-validUntil.value<quoteDate.value){
+if(quoteDate.value&&validUntil.value&&validUntil.value<quoteDate.value){
 alert("Valid Until cannot be earlier than Quotation Date.");
 updateValidUntil();
 }
 saveData();
 });
-
 currencySelect.addEventListener("change",()=>{
 calculate();
 calculateProfit();
 saveData();
 });
-
 document.querySelector(".container").addEventListener("input",event=>{
 if(event.target.matches("input,textarea")){
 if(event.target.classList.contains("description")){
@@ -644,7 +513,6 @@ calculateProfit();
 saveData();
 }
 });
-
 resizeAllDescriptions();
 calculate();
 calculateProfit();
