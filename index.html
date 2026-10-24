@@ -26,6 +26,12 @@ button:hover{background:#104677}
 .section-title{margin-top:30px;border-bottom:2px solid #e1e5eb;padding-bottom:8px}
 @media(max-width:600px){.grid{grid-template-columns:1fr}.container{padding:20px}body{padding:10px}}
 @media print{
+textarea::placeholder {
+  color: transparent;
+}
+textarea {
+  resize: none;
+}
 body{background:white;padding:0}
 .container{box-shadow:none;padding:5px;border-radius:0}
 button,.note{display:none}
