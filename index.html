@@ -4,11 +4,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AI Quotation Generator V4</title>
+<title>AI Quotation Generator V5</title>
 <style>
 *{box-sizing:border-box}
 body{font-family:Arial,sans-serif;background:#eef2f7;color:#253247;margin:0;padding:25px}
-.container{max-width:850px;margin:auto;background:white;padding:35px;border-radius:12px;box-shadow:0 4px 20px #0001}
+.container{max-width:900px;margin:auto;background:white;padding:35px;border-radius:12px;box-shadow:0 4px 20px #0001}
 h1{color:#175b9c;margin-bottom:8px}
 .subtitle{color:#667085;margin-bottom:30px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
@@ -29,6 +29,11 @@ button:hover{background:#104677}
 .delete-btn:hover{background:#922b21}
 .note{font-size:13px;color:#667085}
 .save-status{color:#16803c;font-size:13px;margin-top:12px}
+.ai-panel{background:#f2f7fd;border:1px solid #d6e5f7;border-radius:10px;padding:20px;margin-top:25px}
+.ai-panel h2{color:#175b9c;margin-top:0}
+.ai-result{margin-top:15px}
+.secondary-btn{background:#287c65}
+.secondary-btn:hover{background:#1b5f4e}
 @media(max-width:600px){
 .grid{grid-template-columns:1fr}
 .container{padding:20px}
@@ -39,7 +44,7 @@ table{min-width:600px}
 @page{margin:15mm}
 body{background:white;padding:0}
 .container{box-shadow:none;padding:0;border-radius:0}
-button,.note,.actions,.save-status{display:none!important}
+button,.note,.actions,.save-status,.ai-panel{display:none!important}
 input,textarea{border:0;padding:0;background:transparent;color:#253247}
 input::placeholder,textarea::placeholder{color:transparent}
 textarea{resize:none}
@@ -115,6 +120,21 @@ tr{break-inside:avoid}
 <button type="button" onclick="addItem()">+ Add Service</button>
 <div class="total" id="total">Total: $100.00</div>
 
+<div class="ai-panel">
+<h2>AI Service Description</h2>
+<p class="note">Free template-based assistant. No AI API is connected yet.</p>
+<label>Briefly describe the service</label>
+<textarea id="aiInput" rows="3" placeholder="Office cleaning, 200 sqm, twice a week"></textarea>
+<button type="button" onclick="generateDescription()">Generate Description</button>
+
+<div class="ai-result">
+<label>Generated Description</label>
+<textarea id="aiOutput" rows="5" placeholder="Your professional English description will appear here."></textarea>
+</div>
+<button type="button" class="secondary-btn" onclick="useDescription()">Use in Quotation</button>
+<p class="note">Please review the generated text before using it in a customer quotation.</p>
+</div>
+
 <h2 class="section-title">Notes & Terms</h2>
 <textarea id="notes" rows="4" placeholder="Payment terms, scope of work, exclusions, or additional notes."></textarea>
 
@@ -125,23 +145,16 @@ tr{break-inside:avoid}
 
 <script>
 const STORAGE_KEY = "ai_quotation_generator_v4";
-
 const fieldIds = [
-  "company",
-  "companyEmail",
-  "companyPhone",
-  "quoteNumber",
-  "quoteDate",
-  "validUntil",
-  "customer",
-  "customerEmail",
-  "notes"
+  "company","companyEmail","companyPhone",
+  "quoteNumber","quoteDate","validUntil",
+  "customer","customerEmail","notes",
+  "aiInput","aiOutput"
 ];
 
 function money(value) {
   return Number(value).toLocaleString("en-US", {
-    style: "currency",
-    currency: "USD"
+    style:"currency",currency:"USD"
   });
 }
 
@@ -157,7 +170,7 @@ function calculate() {
   document.getElementById("total").textContent = "Total: " + money(total);
 }
 
-function createRow(description = "", qty = "1", price = "0") {
+function createRow(description="",qty="1",price="0") {
   const row = document.createElement("tr");
   row.innerHTML = `
     <td><input class="description" placeholder="Service description"></td>
@@ -166,8 +179,7 @@ function createRow(description = "", qty = "1", price = "0") {
     <td class="amount">$0.00</td>
     <td class="actions">
       <button type="button" class="delete-btn" onclick="removeItem(this)">Delete</button>
-    </td>
-  `;
+    </td>`;
   row.querySelector(".description").value = description;
   row.querySelector(".qty").value = qty;
   row.querySelector(".price").value = price;
@@ -182,7 +194,7 @@ function addItem() {
 
 function removeItem(button) {
   const row = button.closest("tr");
-  if (row) {
+  if(row) {
     row.remove();
     calculate();
     saveData();
@@ -192,8 +204,8 @@ function removeItem(button) {
 function formatDate(date) {
   return [
     date.getFullYear(),
-    String(date.getMonth() + 1).padStart(2, "0"),
-    String(date.getDate()).padStart(2, "0")
+    String(date.getMonth()+1).padStart(2,"0"),
+    String(date.getDate()).padStart(2,"0")
   ].join("-");
 }
 
@@ -201,120 +213,137 @@ const quoteDate = document.getElementById("quoteDate");
 const validUntil = document.getElementById("validUntil");
 
 function updateValidUntil() {
-  if (!quoteDate.value) {
-    validUntil.value = "";
-    validUntil.min = "";
+  if(!quoteDate.value) {
+    validUntil.value="";
+    validUntil.min="";
     return;
   }
-
-  const date = new Date(quoteDate.value + "T12:00:00");
-  date.setDate(date.getDate() + 30);
-  validUntil.min = quoteDate.value;
-  validUntil.value = formatDate(date);
+  const date = new Date(quoteDate.value+"T12:00:00");
+  date.setDate(date.getDate()+30);
+  validUntil.min=quoteDate.value;
+  validUntil.value=formatDate(date);
 }
 
 function collectData() {
-  const fields = {};
+  const fields={};
   fieldIds.forEach(id => {
-    fields[id] = document.getElementById(id).value;
+    fields[id]=document.getElementById(id).value;
   });
-
-  const items = Array.from(
-    document.querySelectorAll("#items tr")
-  ).map(row => ({
-    description: row.querySelector(".description").value,
-    qty: row.querySelector(".qty").value,
-    price: row.querySelector(".price").value
+  const items=Array.from(document.querySelectorAll("#items tr")).map(row=>({
+    description:row.querySelector(".description").value,
+    qty:row.querySelector(".qty").value,
+    price:row.querySelector(".price").value
   }));
-
-  return { fields, items };
+  return {fields,items};
 }
 
 function saveData() {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(collectData()));
-    document.getElementById("saveStatus").textContent =
-      "Saved automatically in this browser";
-  } catch (error) {
-    document.getElementById("saveStatus").textContent =
-      "Auto-save unavailable. Please export your quotation.";
+    localStorage.setItem(STORAGE_KEY,JSON.stringify(collectData()));
+    document.getElementById("saveStatus").textContent="Saved automatically in this browser";
+  } catch(error) {
+    document.getElementById("saveStatus").textContent="Auto-save unavailable. Please export your quotation.";
   }
 }
 
 function loadData() {
   let saved;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return false;
-    saved = JSON.parse(raw);
-    if (!saved || typeof saved !== "object") return false;
-  } catch (error) {
+    const raw=localStorage.getItem(STORAGE_KEY);
+    if(!raw)return false;
+    saved=JSON.parse(raw);
+    if(!saved || typeof saved!=="object")return false;
+  } catch(error) {
     return false;
   }
-
-  if (saved.fields && typeof saved.fields === "object") {
-    fieldIds.forEach(id => {
-      if (typeof saved.fields[id] === "string") {
-        document.getElementById(id).value = saved.fields[id];
+  if(saved.fields && typeof saved.fields==="object") {
+    fieldIds.forEach(id=>{
+      if(typeof saved.fields[id]==="string") {
+        document.getElementById(id).value=saved.fields[id];
       }
     });
   }
-
-  if (Array.isArray(saved.items)) {
-    const tbody = document.getElementById("items");
+  if(Array.isArray(saved.items)) {
+    const tbody=document.getElementById("items");
     tbody.replaceChildren();
-    saved.items.forEach(item => {
-      if (item && typeof item === "object") {
+    saved.items.forEach(item=>{
+      if(item && typeof item==="object") {
         tbody.appendChild(createRow(
-          String(item.description ?? ""),
-          String(item.qty ?? "1"),
-          String(item.price ?? "0")
+          String(item.description??""),
+          String(item.qty??"1"),
+          String(item.price??"0")
         ));
       }
     });
   }
-
-  validUntil.min = quoteDate.value || "";
+  validUntil.min=quoteDate.value||"";
   calculate();
   return true;
 }
 
-quoteDate.value = formatDate(new Date());
-updateValidUntil();
-
-const restored = loadData();
-
-if (restored) {
-  document.getElementById("saveStatus").textContent =
-    "Previous quotation restored";
+function generateDescription() {
+  const input=document.getElementById("aiInput").value.trim();
+  if(!input) {
+    alert("Please enter a short service description first.");
+    return;
+  }
+  const clean=input.replace(/\s+/g," ").replace(/[.!?]+$/,"");
+  const output="Professional service quotation for "+clean+
+    ". The exact scope of work, schedule, and service requirements are subject to customer confirmation.";
+  document.getElementById("aiOutput").value=output;
+  saveData();
 }
 
-quoteDate.addEventListener("change", () => {
-  updateValidUntil();
-  saveData();
-});
-
-validUntil.addEventListener("change", () => {
-  if (quoteDate.value && validUntil.value &&
-      validUntil.value < quoteDate.value) {
-    alert("Valid Until cannot be earlier than Quotation Date.");
-    updateValidUntil();
+function useDescription() {
+  const text=document.getElementById("aiOutput").value.trim();
+  if(!text) {
+    alert("Please generate or enter a description first.");
+    return;
   }
-  saveData();
-});
-
-document.querySelector(".container").addEventListener("input", event => {
-  if (event.target.matches("input, textarea")) {
-    calculate();
-    saveData();
+  const first=document.querySelector("#items tr .description");
+  if(first) {
+    first.value=text;
+  } else {
+    document.getElementById("items").appendChild(createRow(text,"1","0"));
   }
-});
+  calculate();
+  saveData();
+  alert("Description added to quotation.");
+}
 
 function printQuotation() {
   calculate();
   saveData();
   window.print();
 }
+
+quoteDate.value=formatDate(new Date());
+updateValidUntil();
+const restored=loadData();
+if(restored) {
+  document.getElementById("saveStatus").textContent="Previous quotation restored";
+}
+
+quoteDate.addEventListener("change",()=>{
+  updateValidUntil();
+  saveData();
+});
+
+validUntil.addEventListener("change",()=>{
+  if(quoteDate.value && validUntil.value &&
+     validUntil.value<quoteDate.value) {
+    alert("Valid Until cannot be earlier than Quotation Date.");
+    updateValidUntil();
+  }
+  saveData();
+});
+
+document.querySelector(".container").addEventListener("input",event=>{
+  if(event.target.matches("input,textarea")) {
+    calculate();
+    saveData();
+  }
+});
 
 calculate();
 </script>
