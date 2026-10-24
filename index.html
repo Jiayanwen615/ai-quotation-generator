@@ -1,0 +1,109 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Quotation Generator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f3f6fa;
+      margin: 0;
+      padding: 25px;
+      color: #243247;
+    }
+    .container {
+      max-width: 760px;
+      margin: auto;
+      background: white;
+      padding: 28px;
+      border-radius: 12px;
+      box-shadow: 0 4px 18px #0001;
+    }
+    h1 { color: #1763aa; }
+    label {
+      display: block;
+      margin-top: 16px;
+      font-weight: bold;
+    }
+    input, textarea {
+      box-sizing: border-box;
+      width: 100%;
+      padding: 11px;
+      margin-top: 6px;
+      border: 1px solid #ccd4df;
+      border-radius: 6px;
+      font: inherit;
+    }
+    button {
+      background: #1763aa;
+      color: white;
+      border: 0;
+      padding: 12px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 20px;
+    }
+    .total {
+      font-size: 24px;
+      font-weight: bold;
+      margin-top: 24px;
+    }
+    .note { color: #667085; font-size: 13px; }
+    @media print {
+      body { background: white; padding: 0; }
+      .container { box-shadow: none; }
+      button, .note { display: none; }
+      input, textarea { border: none; padding-left: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Quotation Generator</h1>
+    <p>Create a professional quotation in minutes.</p>
+
+    <label>Your Company Name</label>
+    <input id="company" placeholder="ABC Cleaning Services">
+
+    <label>Customer Name</label>
+    <input id="customer" placeholder="Customer or company name">
+
+    <label>Service Description</label>
+    <textarea id="service" rows="4"
+      placeholder="Weekly office cleaning service"></textarea>
+
+    <label>Quantity</label>
+    <input id="quantity" type="number" min="0" value="1">
+
+    <label>Unit Price (USD)</label>
+    <input id="price" type="number" min="0" step="0.01" value="100">
+
+    <div class="total" id="total">Total: $100.00</div>
+
+    <button onclick="window.print()">Print / Save as PDF</button>
+    <p class="note">All calculations run in your browser.</p>
+  </div>
+
+  <script>
+    const quantity = document.getElementById("quantity");
+    const price = document.getElementById("price");
+    const total = document.getElementById("total");
+
+    function calculateTotal() {
+      const q = Math.max(0, Number(quantity.value) || 0);
+      const p = Math.max(0, Number(price.value) || 0);
+      const amount = q * p;
+      total.textContent = "Total: " +
+        amount.toLocaleString("en-US", {
+          style: "currency",
+          currency: "USD"
+        });
+    }
+
+    quantity.addEventListener("input", calculateTotal);
+    price.addEventListener("input", calculateTotal);
+  </script>
+</body>
+</html>
