@@ -1004,7 +1004,15 @@ alert("Description added to quotation.");
 
 function preparePrint(){
 clearPrintClasses();
+const billToGrid=document.getElementById("customer").closest(".grid");
+const billToEmpty=
+!document.getElementById("customer").value.trim()&&
+!document.getElementById("customerEmail").value.trim();
 
+if(billToEmpty){
+billToGrid.classList.add("print-hidden-empty");
+billToGrid.previousElementSibling.classList.add("print-hidden-empty");
+}
 document.querySelectorAll(".container label").forEach(label=>{
 if(label.closest(".panel"))return;
 
