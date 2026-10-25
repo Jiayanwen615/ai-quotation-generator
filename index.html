@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Cleaning Quote & Profit Calculator V17</title>
+<title>Cleaning Quote & Profit Calculator V18</title>
 <style>
 *{box-sizing:border-box}
 body{font-family:Arial,sans-serif;background:#eef2f7;color:#253247;margin:0;padding:25px}
@@ -245,6 +245,8 @@ Use New Quotation to create a separate record.
 Opening a saved quotation lets you edit that record.
 Quotation numbers are labels; each record has its own internal ID.
 </p>
+<div id="quotationOverview" class="profit-result"></div>
+
 <label for="quotationSearch">Search Saved Quotations</label>
 <input
   id="quotationSearch"
@@ -747,8 +749,106 @@ total+
 nonNegativeValue(item.qty)*nonNegativeValue(item.price),0
 );
 }
+/* QUOTATION OVERVIEW */
+function renderQuotationOverview(){
+const box=document.getElementById("quotationOverview");
+if(!box)return;
 
+box.replaceChildren();
+if(!library)return;
+
+const counts={
+draft:0,
+sent:0,
+accepted:0,
+declined:0
+};
+
+const labels={
+draft:"Draft — 草稿",
+sent:"Sent — 已发送",
+accepted:"Accepted — 已接受",
+declined:"Declined — 已拒绝"
+};
+
+const totals=new Map();
+
+library.quotations.forEach(record=>{
+const fields=record.data.fields;
+
+const status=["draft","sent","accepted","declined"]
+.includes(fields.quoteStatus)?fields.quoteStatus:"draft";
+
+counts[status]++;
+
+const currency=currencyCodes.includes(fields.currency)?
+fields.currency:"USD";
+
+totals.set(
+currency,
+(totals.get(currency)||0)+quotationTotal(record.data)
+);
+});
+
+const heading=document.createElement("h3");
+heading.textContent="Quotation Overview";
+
+const totalCount=document.createElement("p");
+const countText=document.createElement("strong");
+countText.textContent=
+"Total Quotations: "+library.quotations.length;
+totalCount.appendChild(countText);
+
+const statusGrid=document.createElement("div");
+statusGrid.className="grid";
+
+Object.keys(counts).forEach(status=>{
+const row=document.createElement("div");
+row.className="result-line";
+
+const label=document.createElement("span");
+label.textContent=labels[status];
+
+const value=document.createElement("strong");
+value.textContent=String(counts[status]);
+
+row.append(label,value);
+statusGrid.appendChild(row);
+});
+
+const amountHeading=document.createElement("h4");
+amountHeading.textContent="Quoted Amounts by Currency";
+
+box.append(heading,totalCount,statusGrid,amountHeading);
+
+currencyCodes.forEach(currency=>{
+if(!totals.has(currency))return;
+
+const row=document.createElement("div");
+row.className="result-line";
+
+const label=document.createElement("span");
+label.textContent=currency;
+
+const value=document.createElement("strong");
+value.textContent=money(totals.get(currency),currency);
+
+row.append(label,value);
+box.appendChild(row);
+});
+
+const note=document.createElement("p");
+note.className="note";
+note.textContent=
+"Overview includes all saved quotations, regardless of search or filters. "+
+"Amounts include all statuses and are quoted values, not payments received. "+
+"Different currencies are shown separately.";
+
+box.appendChild(note);
+}
 function renderSavedQuotations(){
+renderQuotationOverview();
+
 const list=document.getElementById("savedList");
 list.replaceChildren();
 
