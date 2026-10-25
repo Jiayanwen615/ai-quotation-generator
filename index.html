@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Cleaning Quote & Profit Calculator V14</title>
+<title>Cleaning Quote & Profit Calculator V15</title>
 <style>
 *{box-sizing:border-box}
 body{font-family:Arial,sans-serif;background:#eef2f7;color:#253247;margin:0;padding:25px}
@@ -88,6 +88,16 @@ th:nth-child(4){width:18%}
 <button type="button" class="new-btn" onclick="newQuotation()">+ New Quotation</button>
 <button type="button" class="secondary-btn" onclick="saveQuotation()">Save Quotation</button>
 <button type="button" onclick="showSavedQuotations()">Saved Quotations</button>
+</div>
+
+<div class="panel">
+<label for="quoteStatus">Quotation Status</label>
+<select id="quoteStatus" onchange="saveData()">
+<option value="draft">Draft — 草稿</option>
+<option value="sent">Sent — 已发送</option>
+<option value="accepted">Accepted — 已接受</option>
+<option value="declined">Declined — 已拒绝</option>
+</select>
 </div>
 
 <h1>QUOTATION</h1>
@@ -277,7 +287,7 @@ const fieldIds=[
 "company","companyEmail","companyPhone",
 "quoteNumber","quoteDate","validUntil",
 "customer","customerEmail","notes",
-"aiInput","aiOutput","currency",
+"aiInput","aiOutput","currency","quoteStatus",
 "workers","hours","laborRate","payrollBurden",
 "supplies","travel","overhead",
 "processingFee","targetMargin"
@@ -782,7 +792,15 @@ if(active)title.textContent+=" — Currently open";
 
 const detail=document.createElement("div");
 detail.className="saved-detail";
+const statusLabels={
+draft:"Draft — 草稿",
+sent:"Sent — 已发送",
+accepted:"Accepted — 已接受",
+declined:"Declined — 已拒绝"
+};
+
 detail.textContent=[
+statusLabels[fields.quoteStatus]||statusLabels.draft,
 (fields.customer||"").trim()||"No customer name",
 fields.quoteDate||"No quotation date",
 money(quotationTotal(record.data),fields.currency),
