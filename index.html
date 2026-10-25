@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Cleaning Quote & Profit Calculator V12</title>
+<title>Cleaning Quote & Profit Calculator V13</title>
 <style>
 *{box-sizing:border-box}
 body{font-family:Arial,sans-serif;background:#eef2f7;color:#253247;margin:0;padding:25px}
@@ -238,10 +238,22 @@ Quotation numbers are labels; each record has its own internal ID.
 <p id="savedCount" class="note"></p>
 <div id="savedList"></div>
 <button type="button" class="secondary-btn" onclick="downloadBackup()">Download All Data Backup</button>
+
+<button type="button" onclick="document.getElementById('backupFile').click()">Import Backup</button>
+
+<input
+  id="backupFile"
+  type="file"
+  accept=".json,application/json"
+  hidden
+  onchange="previewBackup(this)"
+>
+
+<div id="importPreview" class="profit-result" hidden></div>
 <p class="note">
 The JSON backup includes customer details, internal costs, and profit settings.
 Keep it private. Use PDF when sharing a quotation with a customer.
-This version can download backups; it does not include a backup import screen.
+Use Import Backup to preview and restore a JSON backup. Existing quotations are kept; conflicting versions are added as separate copies.
 </p>
 </div>
 
@@ -1199,7 +1211,336 @@ setStatus(
 true
 );
 });
+/* BACKUP IMPORT */
+let pendingBackupImport=null;
 
+function backupDataKey(data){
+return JSON.stringify(normalizeData(data));
+}
+
+function readBackupRecords(parsed){
+let records=[];
+let sourceCurrentId="";
+
+if(validLibrary(parsed)){
+records=clone(parsed.quotations);
+sourceCurrentId=parsed.currentId;
+}else if(validData(parsed)){
+records=[makeRecord(normalizeData(parsed))];
+}else if(
+parsed&&
+parsed.application==="Cleaning Quote & Profit Calculator"&&
+parsed.version===12
+){
+let savedLibrary=null;
+
+if(validLibrary(parsed.library)){
+savedLibrary=parsed.library;
+}else if(typeof parsed.rawV12==="string"){
+try{
+const rawLibrary=JSON.parse(parsed.rawV12);
+
+if(validLibrary(rawLibrary)){
+savedLibrary=rawLibrary;
+}
+}catch(error){
+/* Try the other recovery sources below. */
+}
+}
+
+if(savedLibrary){
+records=clone(savedLibrary.quotations);
+sourceCurrentId=savedLibrary.currentId;
+}
+
+/* Recover the older quotation only when no library was available. */
+if(!records.length&&typeof parsed.rawV11==="string"){
+try{
+const legacy=JSON.parse(parsed.rawV11);
+
+if(validData(legacy)){
+records=[makeRecord(normalizeData(legacy))];
+}
+}catch(error){
+/* The current form may still be recoverable. */
+}
+}
+
+/* Keep unsaved form changes when they differ from saved records. */
+if(validData(parsed.currentForm)){
+const formKey=backupDataKey(parsed.currentForm);
+
+if(!records.some(record=>backupDataKey(record.data)===formKey)){
+const recovered=makeRecord(
+normalizeData(parsed.currentForm),
+records
+);
+
+if(sourceCurrentId){
+recovered.id=sourceCurrentId;
+}
+
+records.push(recovered);
+}
+}
+}else{
+throw new Error("Unsupported backup format.");
+}
+
+if(!records.length){
+throw new Error("No valid quotations were found in this backup.");
+}
+
+records.forEach(record=>{
+if(!validData(record.data)){
+throw new Error("A quotation in this backup is invalid.");
+}
+
+const code=record.data.fields.currency;
+
+if(code!==undefined&&!currencyCodes.includes(code)){
+throw new Error("Unsupported quotation currency: "+code);
+}
+
+record.data=normalizeData(record.data);
+});
+
+return records;
+}
+
+function buildImportPlan(records){
+const next=clone(library);
+let added=0;
+let skipped=0;
+let copied=0;
+
+records.forEach(source=>{
+const sourceKey=backupDataKey(source.data);
+
+/*
+An unchanged record is skipped.
+A different version of the same record is added as a separate copy.
+Existing records are never replaced.
+*/
+const alreadyPresent=next.quotations.some(existing=>
+(
+existing.id===source.id||
+existing.importedFromId===source.id
+)&&
+backupDataKey(existing.data)===sourceKey
+);
+
+if(alreadyPresent){
+skipped++;
+return;
+}
+
+const record=clone(source);
+const conflictingId=next.quotations.some(existing=>
+existing.id===record.id
+);
+
+if(conflictingId){
+record.id=makeRecord(record.data,next.quotations).id;
+record.importedFromId=source.id;
+copied++;
+}
+
+next.quotations.push(record);
+added++;
+});
+
+return {next,added,skipped,copied};
+}
+
+function closeBackupPreview(){
+pendingBackupImport=null;
+
+const box=document.getElementById("importPreview");
+box.replaceChildren();
+box.hidden=true;
+}
+
+async function previewBackup(input){
+const file=input.files&&input.files[0];
+input.value="";
+
+closeBackupPreview();
+
+if(!file)return;
+
+if(!library||savingBlocked){
+alert(
+"Import is unavailable while saving is paused. "+
+"Keep your backup and resolve the storage warning first."
+);
+return;
+}
+
+if(file.size>5*1024*1024){
+alert("Please choose a JSON backup smaller than 5 MB.");
+return;
+}
+
+try{
+const text=await file.text();
+const parsed=JSON.parse(text.replace(/^\uFEFF/,""));
+const records=readBackupRecords(parsed);
+
+/* Storage may have changed while the file was being read. */
+if(!library||savingBlocked){
+alert("Saved data changed. Please reload before importing.");
+return;
+}
+
+const plan=buildImportPlan(records);
+
+pendingBackupImport={
+records,
+storageRaw:lastStorageRaw,
+formRaw:JSON.stringify(collectData())
+};
+
+const box=document.getElementById("importPreview");
+box.replaceChildren();
+box.hidden=false;
+
+const heading=document.createElement("h3");
+heading.textContent="Backup Import Preview";
+
+const fileName=document.createElement("p");
+fileName.className="note";
+fileName.textContent="File: "+file.name;
+
+const summary=document.createElement("p");
+summary.textContent=
+"Add: "+plan.added+
+" · Already saved: "+plan.skipped+
+" · Separate copies for conflicting records: "+plan.copied;
+
+const explanation=document.createElement("p");
+explanation.className="note";
+explanation.textContent=
+"Existing quotations will be kept. "+
+"Different versions of the same record will be added as separate copies. "+
+"Your currently open quotation will stay open.";
+
+const list=document.createElement("ul");
+
+records.slice(0,50).forEach(record=>{
+const item=document.createElement("li");
+const fields=record.data.fields;
+
+item.textContent=[
+fields.quoteNumber.trim()||"Untitled quotation",
+fields.customer.trim()||"No customer name",
+money(quotationTotal(record.data),fields.currency)
+].join(" · ");
+
+list.appendChild(item);
+});
+
+if(records.length>50){
+const more=document.createElement("li");
+more.textContent="And "+(records.length-50)+" more quotation(s).";
+list.appendChild(more);
+}
+
+const actions=document.createElement("div");
+actions.className="saved-actions";
+
+const confirmButton=document.createElement("button");
+confirmButton.type="button";
+confirmButton.className="secondary-btn";
+confirmButton.textContent="Confirm Import";
+confirmButton.addEventListener("click",confirmBackupImport);
+
+const cancelButton=document.createElement("button");
+cancelButton.type="button";
+cancelButton.className="new-btn";
+cancelButton.textContent="Cancel";
+cancelButton.addEventListener("click",closeBackupPreview);
+
+actions.append(confirmButton,cancelButton);
+box.append(heading,fileName,summary,explanation,list,actions);
+
+box.scrollIntoView({behavior:"smooth",block:"start"});
+
+}catch(error){
+closeBackupPreview();
+
+alert(
+"Backup could not be opened. Nothing was imported.\n\n"+
+(error instanceof Error?error.message:"Invalid backup file.")
+);
+}
+}
+
+function confirmBackupImport(){
+if(!pendingBackupImport)return;
+
+if(!library||savingBlocked){
+alert("Import stopped because browser saving is unavailable.");
+return;
+}
+
+/* Ask for a fresh preview if the user edited or switched quotations. */
+if(
+lastStorageRaw!==pendingBackupImport.storageRaw||
+JSON.stringify(collectData())!==pendingBackupImport.formRaw
+){
+closeBackupPreview();
+
+alert(
+"Your quotations changed after this preview. "+
+"Please select the backup again to review an updated import."
+);
+return;
+}
+
+const records=pendingBackupImport.records;
+
+/* Preserve the current form before adding any imported records. */
+if(!saveData()){
+alert(
+"Import stopped because the current quotation could not be saved. "+
+"Existing records have not been replaced."
+);
+return;
+}
+
+const plan=buildImportPlan(records);
+
+if(plan.added===0){
+closeBackupPreview();
+
+setStatus(
+"No new quotations imported. "+
+plan.skipped+" unchanged record(s) are already saved."
+);
+return;
+}
+
+/* One write adds the new records while keeping the current quotation. */
+if(!persistLibrary(plan.next)){
+closeBackupPreview();
+
+alert(
+"Import could not be saved. No imported records were added. "+
+"Keep your backup file and check the storage warning."
+);
+return;
+}
+
+closeBackupPreview();
+renderSavedQuotations();
+
+setStatus(
+"Import complete: "+plan.added+" quotation(s) added; "+
+plan.skipped+" unchanged record(s) skipped. "+
+"Your previous quotations have been kept."
+);
+}
 /* INITIALIZATION */
 quoteDate.value=formatDate(new Date());
 updateValidUntil();
