@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Cleaning Quote & Profit Calculator V16</title>
+<title>Cleaning Quote & Profit Calculator V17</title>
 <style>
 *{box-sizing:border-box}
 body{font-family:Arial,sans-serif;background:#eef2f7;color:#253247;margin:0;padding:25px}
@@ -843,7 +843,13 @@ deleteButton.className="delete-btn";
 deleteButton.textContent="Delete";
 deleteButton.addEventListener("click",()=>deleteQuotation(record.id));
 
-actions.append(openButton,deleteButton);
+const copyButton=document.createElement("button");
+copyButton.type="button";
+copyButton.className="secondary-btn";
+copyButton.textContent="Copy Quotation";
+copyButton.addEventListener("click",()=>duplicateQuotation(record.id));
+
+actions.append(openButton,copyButton,deleteButton);
 card.append(title,detail,actions);
 list.appendChild(card);
 });
@@ -912,7 +918,78 @@ fields,
 items:[{description:"",qty:"1",price:"0"}]
 };
 }
+/* COPY AN EXISTING QUOTATION */
+function duplicateQuotation(id){
+if(!library||savingBlocked){
+alert(
+"Copy is unavailable while saving is paused. "+
+"Please check the storage warning first."
+);
+return;
+}
 
+if(!library.quotations.some(record=>record.id===id)){
+alert("The quotation to copy could not be found.");
+return;
+}
+
+/* Preserve current edits before creating the copy. */
+if(!saveData()){
+alert(
+"The current quotation could not be saved. "+
+"No copy was created."
+);
+return;
+}
+
+const source=library.quotations.find(record=>record.id===id);
+const next=clone(library);
+const data=normalizeData(source.data);
+
+const today=new Date();
+const expiry=new Date(today);
+expiry.setDate(expiry.getDate()+30);
+
+data.fields.quoteNumber=nextQuoteNumber(
+source.data.fields.quoteNumber,
+next.quotations
+);
+
+data.fields.quoteDate=formatDate(today);
+data.fields.validUntil=formatDate(expiry);
+data.fields.quoteStatus="draft";
+
+const copy=makeRecord(data,next.quotations);
+
+next.quotations.push(copy);
+next.currentId=copy.id;
+
+/* Save the separate record before switching the editor. */
+if(!persistLibrary(next)){
+alert(
+"The copy could not be saved. "+
+"The original quotation has been kept."
+);
+return;
+}
+
+/* Make the new draft visible even when filters were active. */
+const search=document.getElementById("quotationSearch");
+const statusFilter=document.getElementById("quotationStatusFilter");
+
+if(search)search.value="";
+if(statusFilter)statusFilter.value="";
+
+applyData(copy.data);
+renderSavedQuotations();
+
+setStatus(
+"Copied as "+data.fields.quoteNumber+
+". The copy is a draft. The original quotation has been kept."
+);
+
+window.scrollTo({top:0,behavior:"smooth"});
+}
 function newQuotation(){
 if(!library){
 alert("Saved data is unavailable. Please save your work as PDF.");
