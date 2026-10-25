@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Cleaning Quote & Profit Calculator V15</title>
+<title>Cleaning Quote & Profit Calculator V16</title>
 <style>
 *{box-sizing:border-box}
 body{font-family:Arial,sans-serif;background:#eef2f7;color:#253247;margin:0;padding:25px}
@@ -252,6 +252,15 @@ Quotation numbers are labels; each record has its own internal ID.
   placeholder="Search by quotation number or customer name"
   oninput="event.stopPropagation();renderSavedQuotations()"
 >
+<label for="quotationStatusFilter">Filter by Status</label>
+<select id="quotationStatusFilter" onchange="renderSavedQuotations()">
+<option value="">All Statuses — 全部状态</option>
+<option value="draft">Draft — 草稿</option>
+<option value="sent">Sent — 已发送</option>
+<option value="accepted">Accepted — 已接受</option>
+<option value="declined">Declined — 已拒绝</option>
+</select>
+
 <p id="savedCount" class="note"></p>
 <div id="savedList"></div>
 <button type="button" class="secondary-btn" onclick="downloadBackup()">Download All Data Backup</button>
@@ -752,18 +761,30 @@ return;
 const query=document.getElementById("quotationSearch")
 .value.trim().toLowerCase();
 
+const statusFilter=document.getElementById("quotationStatusFilter").value;
+
 const records=library.quotations.filter(record=>{
 const fields=record.data.fields;
 
 const number=String(fields.quoteNumber||"").toLowerCase();
 const customer=String(fields.customer||"").toLowerCase();
 
-return !query||number.includes(query)||customer.includes(query);
+const status=["draft","sent","accepted","declined"]
+.includes(fields.quoteStatus)?fields.quoteStatus:"draft";
+
+const matchesSearch=
+!query||number.includes(query)||customer.includes(query);
+
+const matchesStatus=
+!statusFilter||status===statusFilter;
+
+return matchesSearch&&matchesStatus;
 }).sort((a,b)=>
 b.updatedAt.localeCompare(a.updatedAt)
 );
 
-document.getElementById("savedCount").textContent=query?
+document.getElementById("savedCount").textContent=
+(query||statusFilter)?
 records.length+" matching quotation(s) out of "+
 library.quotations.length+" saved.":
 library.quotations.length+" quotation(s) saved in this browser.";
@@ -771,9 +792,11 @@ library.quotations.length+" quotation(s) saved in this browser.";
 if(records.length===0){
 const message=document.createElement("p");
 message.className="note";
-message.textContent="No matching quotations. Clear the search to show all.";
+message.textContent=
+"No matching quotations. Clear the search and choose All Statuses to show all.";
 list.appendChild(message);
 return;
+}
 }
 
 records.forEach(record=>{
