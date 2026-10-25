@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Cleaning Quote & Profit Calculator V18</title>
+<title>Cleaning Quote & Profit Calculator V19</title>
 <style>
 *{box-sizing:border-box}
 body{font-family:Arial,sans-serif;background:#eef2f7;color:#253247;margin:0;padding:25px}
@@ -65,7 +65,7 @@ table{min-width:650px}
 @page{margin:15mm}
 body{background:white;padding:0}
 .container{box-shadow:none;padding:0;border-radius:0}
-button,.note,.actions,.save-status,.panel,.toolbar{display:none!important}
+button,.note,.actions,.save-status,.panel,.toolbar,.service-type{display:none!important}
 .print-hidden-empty{display:none!important}
 input,textarea,select{border:0!important;padding:0!important;background:transparent;color:#253247}
 input::placeholder,textarea::placeholder{color:transparent}
@@ -148,7 +148,7 @@ th:nth-child(4){width:18%}
 <thead>
 <tr>
 <th>Service Description</th>
-<th>Qty</th>
+<th>Qty / Unit</th>
 <th id="unitPriceHeading">Unit Price (USD)</th>
 <th>Amount</th>
 <th class="actions">Action</th>
@@ -317,6 +317,92 @@ targetMargin:"35"
 };
 
 const currencyCodes=["USD","AED","CNY","EUR","GBP"];
+
+/* Editable company defaults, based on researched price references.
+   AED rates apply to one service visit.
+   null means a manual quotation is required. */
+const SERVICE_CATALOG=[
+{
+id:"office_regular",
+label:"Office Cleaning",
+unit:"sqm",
+rateAED:2.50
+},
+{
+id:"apartment_deep",
+label:"Apartment Deep Cleaning",
+unit:"sqm",
+rateAED:8.00
+},
+{
+id:"villa_deep",
+label:"Villa Deep Cleaning",
+unit:"sqm",
+rateAED:10.00
+},
+{
+id:"post_construction",
+label:"Post-Construction Cleaning",
+unit:"sqm",
+rateAED:12.00
+},
+{
+id:"carpet_shampoo",
+label:"Carpet Shampoo Cleaning",
+unit:"sqm",
+rateAED:15.00
+},
+{
+id:"tile_scrubbing",
+label:"Tile Floor Scrubbing",
+unit:"sqm",
+rateAED:8.00
+},
+{
+id:"marble_polishing",
+label:"Marble Polishing",
+unit:"sqm",
+rateAED:12.00
+},
+{
+id:"apartment_regular",
+label:"Apartment Regular Cleaning",
+unit:"hour",
+rateAED:45.00
+},
+{
+id:"sofa",
+label:"Sofa Cleaning",
+unit:"seat",
+rateAED:50.00
+},
+{
+id:"move_in_out",
+label:"Move-In / Move-Out Cleaning",
+unit:"job",
+rateAED:null
+},
+{
+id:"window",
+label:"Window Cleaning",
+unit:"sqm",
+rateAED:null
+},
+{
+id:"other",
+label:"Other — Please Specify",
+unit:null,
+rateAED:null
+}
+];
+
+const SERVICE_UNITS={
+sqm:"SQM (m²)",
+hour:"Hour",
+seat:"Seat",
+job:"Job",
+qty:"Qty"
+};
 const currencySelect=document.getElementById("currency");
 const quoteDate=document.getElementById("quoteDate");
 const validUntil=document.getElementById("validUntil");
@@ -382,25 +468,126 @@ function resizeAllDescriptions(){
 document.querySelectorAll(".description").forEach(resizeDescription);
 }
 
-function createRow(description="",qty="1",price="0"){
+function createRow(
+description="",
+qty="1",
+price="0",
+serviceType="",
+unit="sqm"
+){
 const row=document.createElement("tr");
 
 row.innerHTML=`
-<td><textarea class="description" rows="3" placeholder="Service description"></textarea></td>
-<td><input type="number" min="0" class="qty"></td>
-<td><input type="number" min="0" step="0.01" class="price"></td>
+<td>
+<select class="service-type" aria-label="Service type"></select>
+<textarea class="description" rows="3" placeholder="Service description or additional details"></textarea>
+<p class="service-rate-note note"></p>
+</td>
+<td>
+<input type="number" min="0" step="0.01" class="qty" aria-label="Quantity or area">
+<select class="unit" aria-label="Pricing unit"></select>
+</td>
+<td>
+<input type="number" min="0" step="0.01" class="price" aria-label="Price per selected unit">
+</td>
 <td class="amount"></td>
 <td class="actions">
 <button type="button" class="delete-btn" onclick="removeItem(this)">Delete</button>
 </td>`;
 
-row.querySelector(".description").value=description;
+const serviceSelect=row.querySelector(".service-type");
+const unitSelect=row.querySelector(".unit");
+const descriptionField=row.querySelector(".description");
+const priceField=row.querySelector(".price");
+const hint=row.querySelector(".service-rate-note");
+
+const placeholder=document.createElement("option");
+placeholder.value="";
+placeholder.textContent="Select a service...";
+serviceSelect.appendChild(placeholder);
+
+SERVICE_CATALOG.forEach(service=>{
+const option=document.createElement("option");
+option.value=service.id;
+option.textContent=service.label;
+serviceSelect.appendChild(option);
+});
+
+Object.entries(SERVICE_UNITS).forEach(([value,label])=>{
+const option=document.createElement("option");
+option.value=value;
+option.textContent=label;
+unitSelect.appendChild(option);
+});
+
+const knownService=SERVICE_CATALOG.some(service=>
+service.id===serviceType
+);
+
+serviceSelect.value=
+serviceType===""?"":knownService?serviceType:"other";
+
+unitSelect.value=
+Object.prototype.hasOwnProperty.call(SERVICE_UNITS,unit)?
+unit:"qty";
+
+/* Restoring a quotation never reapplies catalog prices. */
+descriptionField.value=description;
 row.querySelector(".qty").value=qty;
-row.querySelector(".price").value=price;
+priceField.value=price;
+
+serviceSelect.addEventListener("change",()=>{
+const service=SERVICE_CATALOG.find(item=>
+item.id===serviceSelect.value
+);
+
+if(!service){
+hint.textContent="";
+return;
+}
+
+if(service.id==="other"){
+hint.textContent=
+"Enter your service description, quantity, unit and price.";
+descriptionField.focus();
+}else{
+descriptionField.value=service.label;
+unitSelect.value=service.unit;
+
+if(currencySelect.value==="AED"&&service.rateAED!==null){
+priceField.value=service.rateAED.toFixed(2);
+hint.textContent=
+"Default price per "+SERVICE_UNITS[service.unit]+
+" for one visit. You may adjust the price.";
+}else{
+priceField.value="";
+hint.textContent=
+"Enter a manual price in "+currencySelect.value+
+" per "+SERVICE_UNITS[service.unit]+".";
+}
+}
+
+resizeDescription(descriptionField);
+calculate();
+saveData();
+});
+
+unitSelect.addEventListener("change",()=>{
+/* A different pricing unit requires a matching manual price. */
+serviceSelect.value="other";
+priceField.value="";
+
+hint.textContent=
+"Custom unit selected. Enter a price in "+
+currencySelect.value+" per "+
+SERVICE_UNITS[unitSelect.value]+".";
+
+calculate();
+saveData();
+});
 
 return row;
 }
-
 function addItem(){
 const row=createRow();
 document.getElementById("items").appendChild(row);
@@ -508,6 +695,16 @@ const roundedPrice=Math.ceil(currentSuggestedPrice*100)/100;
 first.querySelector(".qty").value="1";
 first.querySelector(".price").value=roundedPrice.toFixed(2);
 
+const unitField=first.querySelector(".unit");
+const serviceField=first.querySelector(".service-type");
+const rateNote=first.querySelector(".service-rate-note");
+
+if(unitField)unitField.value="job";
+if(serviceField)serviceField.value="other";
+if(rateNote){
+rateNote.textContent="Suggested price for one complete job.";
+}
+
 calculate();
 saveData();
 
@@ -529,7 +726,9 @@ document.querySelectorAll("#items tr")
 ).map(row=>({
 description:row.querySelector(".description").value,
 qty:row.querySelector(".qty").value,
-price:row.querySelector(".price").value
+price:row.querySelector(".price").value,
+serviceType:row.querySelector(".service-type")?.value??"other",
+unit:row.querySelector(".unit")?.value??"qty"
 }));
 
 return {fields,items};
@@ -573,7 +772,12 @@ fields,
 items:data.items.map(item=>({
 description:item.description,
 qty:item.qty,
-price:item.price
+price:item.price,
+serviceType:item.serviceType===""?"":
+SERVICE_CATALOG.some(service=>service.id===item.serviceType)?
+item.serviceType:"other",
+unit:Object.prototype.hasOwnProperty.call(SERVICE_UNITS,item.unit)?
+item.unit:"qty"
 }))
 };
 }
@@ -596,7 +800,13 @@ tbody.replaceChildren();
 
 normalized.items.forEach(item=>{
 tbody.appendChild(
-createRow(item.description,item.qty,item.price)
+createRow(
+item.description,
+item.qty,
+item.price,
+item.serviceType,
+item.unit
+)
 );
 });
 
@@ -1015,7 +1225,13 @@ aiOutput:""
 
 return {
 fields,
-items:[{description:"",qty:"1",price:"0"}]
+items:[{
+description:"",
+qty:"1",
+price:"0",
+serviceType:"",
+unit:"sqm"
+}]
 };
 }
 /* COPY AN EXISTING QUOTATION */
