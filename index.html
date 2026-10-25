@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Cleaning Quote & Profit Calculator V13</title>
+<title>Cleaning Quote & Profit Calculator V14</title>
 <style>
 *{box-sizing:border-box}
 body{font-family:Arial,sans-serif;background:#eef2f7;color:#253247;margin:0;padding:25px}
@@ -235,6 +235,13 @@ Use New Quotation to create a separate record.
 Opening a saved quotation lets you edit that record.
 Quotation numbers are labels; each record has its own internal ID.
 </p>
+<label for="quotationSearch">Search Saved Quotations</label>
+<input
+  id="quotationSearch"
+  type="search"
+  placeholder="Search by quotation number or customer name"
+  oninput="event.stopPropagation();renderSavedQuotations()"
+>
 <p id="savedCount" class="note"></p>
 <div id="savedList"></div>
 <button type="button" class="secondary-btn" onclick="downloadBackup()">Download All Data Backup</button>
@@ -732,12 +739,32 @@ document.getElementById("savedCount").textContent=
 return;
 }
 
-document.getElementById("savedCount").textContent=
-library.quotations.length+" quotation(s) saved in this browser.";
+const query=document.getElementById("quotationSearch")
+.value.trim().toLowerCase();
 
-const records=[...library.quotations].sort((a,b)=>
+const records=library.quotations.filter(record=>{
+const fields=record.data.fields;
+
+const number=String(fields.quoteNumber||"").toLowerCase();
+const customer=String(fields.customer||"").toLowerCase();
+
+return !query||number.includes(query)||customer.includes(query);
+}).sort((a,b)=>
 b.updatedAt.localeCompare(a.updatedAt)
 );
+
+document.getElementById("savedCount").textContent=query?
+records.length+" matching quotation(s) out of "+
+library.quotations.length+" saved.":
+library.quotations.length+" quotation(s) saved in this browser.";
+
+if(records.length===0){
+const message=document.createElement("p");
+message.className="note";
+message.textContent="No matching quotations. Clear the search to show all.";
+list.appendChild(message);
+return;
+}
 
 records.forEach(record=>{
 const fields=record.data.fields;
