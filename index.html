@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Cleaning Quote & Profit Calculator V19</title>
+<title>Cleaning Quote & Profit Calculator V20</title>
 <style>
 *{box-sizing:border-box}
 body{font-family:Arial,sans-serif;background:#eef2f7;color:#253247;margin:0;padding:25px}
@@ -236,6 +236,22 @@ Clearing browser data can delete them. They are not synced to GitHub or other de
 Save important quotations as PDF.
 </p>
 <button type="button" onclick="printQuotation()">Print / Save as PDF</button>
+
+<details class="panel" id="servicePricingPanel" oninput="event.stopPropagation()">
+<summary><strong>Service Price Settings — 服务价格设置</strong></summary>
+
+<p class="note">
+Set your default prices in AED per displayed unit.
+Leave a price blank to require manual pricing.
+Saved quotations keep their existing prices.
+</p>
+
+<div id="servicePriceFields" class="grid"></div>
+
+<button type="button" class="secondary-btn" onclick="saveServicePrices()">Save Default Prices</button>
+
+<p id="priceSettingsStatus" class="note" role="status" aria-live="polite"></p>
+</details>
 
 <div class="panel" id="savedQuotationsPanel">
 <h2>Saved Quotations</h2>
@@ -554,8 +570,10 @@ descriptionField.focus();
 descriptionField.value=service.label;
 unitSelect.value=service.unit;
 
-if(currencySelect.value==="AED"&&service.rateAED!==null){
-priceField.value=service.rateAED.toFixed(2);
+const rate=getServiceRate(service);
+
+if(currencySelect.value==="AED"&&rate!==null){
+priceField.value=rate.toFixed(2);
 hint.textContent=
 "Default price per "+SERVICE_UNITS[service.unit]+
 " for one visit. You may adjust the price.";
@@ -845,6 +863,7 @@ data:clone(data)
 
 function validLibrary(value){
 if(!value||value.version!==12)return false;
+if(!validServicePrices(value.servicePrices))return false;
 if(!Array.isArray(value.quotations))return false;
 if(typeof value.currentId!=="string")return false;
 if(value.quotations.length===0)return false;
@@ -960,6 +979,150 @@ nonNegativeValue(item.qty)*nonNegativeValue(item.price),0
 );
 }
 /* QUOTATION OVERVIEW */
+/* SERVICE PRICE SETTINGS */
+function validServicePrices(prices){
+if(prices===undefined)return true;
+
+if(!prices||typeof prices!=="object"||Array.isArray(prices)){
+return false;
+}
+
+return Object.entries(prices).every(([id,rate])=>{
+const knownService=SERVICE_CATALOG.some(service=>
+service.id===id&&service.id!=="other"
+);
+
+return knownService&&(
+rate===null||
+(typeof rate==="number"&&Number.isFinite(rate)&&rate>=0)
+);
+});
+}
+
+function getServiceRate(service){
+if(service.id==="other")return null;
+
+const prices=library&&library.servicePrices;
+
+if(
+prices&&
+Object.prototype.hasOwnProperty.call(prices,service.id)
+){
+const rate=prices[service.id];
+
+if(rate===null)return null;
+
+if(typeof rate==="number"&&Number.isFinite(rate)&&rate>=0){
+return rate;
+}
+}
+
+return service.rateAED;
+}
+
+function renderServicePriceSettings(){
+const box=document.getElementById("servicePriceFields");
+if(!box)return;
+
+box.replaceChildren();
+if(!library)return;
+
+SERVICE_CATALOG.filter(service=>
+service.id!=="other"
+).forEach(service=>{
+const group=document.createElement("div");
+
+const label=document.createElement("label");
+label.htmlFor="service-price-"+service.id;
+label.textContent=
+service.label+" — AED / "+SERVICE_UNITS[service.unit];
+
+const input=document.createElement("input");
+input.id="service-price-"+service.id;
+input.type="number";
+input.min="0";
+input.step="0.01";
+input.placeholder="Manual pricing";
+input.dataset.serviceId=service.id;
+
+const rate=getServiceRate(service);
+input.value=rate===null?"":rate.toFixed(2);
+
+group.append(label,input);
+box.appendChild(group);
+});
+}
+
+function saveServicePrices(){
+const status=document.getElementById("priceSettingsStatus");
+
+if(!library||savingBlocked){
+status.textContent=
+"Prices could not be saved. Check the browser storage warning.";
+return;
+}
+
+const inputs=Array.from(document.querySelectorAll(
+"#servicePriceFields input[data-service-id]"
+));
+
+const expectedCount=SERVICE_CATALOG.filter(service=>
+service.id!=="other"
+).length;
+
+if(inputs.length!==expectedCount){
+status.textContent="Price fields could not be loaded. Please reload.";
+return;
+}
+
+const prices={};
+
+for(const input of inputs){
+if(!input.checkValidity()){
+input.reportValidity();
+status.textContent=
+"Enter a non-negative price with up to two decimal places, "+
+"or leave it blank for manual pricing.";
+return;
+}
+
+const text=input.value.trim();
+
+prices[input.dataset.serviceId]=
+text===""?null:Number(text);
+}
+
+if(!validServicePrices(prices)){
+status.textContent="Some prices are invalid. Please check them.";
+return;
+}
+
+/* Save the current quotation before updating company defaults. */
+if(!saveData()){
+status.textContent=
+"Prices were not changed because the current quotation could not be saved.";
+return;
+}
+
+const next=clone(library);
+next.servicePrices=prices;
+
+if(!persistLibrary(next)){
+status.textContent=
+"Prices could not be saved. Your previous defaults have been kept.";
+return;
+}
+
+renderServicePriceSettings();
+
+status.textContent=
+"Default AED prices saved in this browser. "+
+"Existing quotation prices have not been changed.";
+
+setStatus(
+"Service price defaults saved. Existing quotation prices are unchanged."
+);
+}
 function renderQuotationOverview(){
 const box=document.getElementById("quotationOverview");
 if(!box)return;
@@ -1768,20 +1931,40 @@ record.data=normalizeData(record.data);
 return records;
 }
 
-function buildImportPlan(records){
+function readBackupServicePrices(parsed){
+const candidates=[parsed,parsed&&parsed.library];
+
+if(parsed&&typeof parsed.rawV12==="string"){
+try{
+candidates.push(JSON.parse(parsed.rawV12));
+}catch(error){
+/* Other backup sources may still be available. */
+}
+}
+
+for(const candidate of candidates){
+if(validLibrary(candidate)){
+return clone(candidate.servicePrices||{});
+}
+}
+
+return {};
+}
+
+function buildImportPlan(records,importedPrices={}){
+if(!validServicePrices(importedPrices)){
+throw new Error("The backup contains invalid service prices.");
+}
+
 const next=clone(library);
 let added=0;
 let skipped=0;
 let copied=0;
+let pricesAdded=0;
 
 records.forEach(source=>{
 const sourceKey=backupDataKey(source.data);
 
-/*
-An unchanged record is skipped.
-A different version of the same record is added as a separate copy.
-Existing records are never replaced.
-*/
 const alreadyPresent=next.quotations.some(existing=>
 (
 existing.id===source.id||
@@ -1810,7 +1993,24 @@ next.quotations.push(record);
 added++;
 });
 
-return {next,added,skipped,copied};
+/*
+Restore missing saved defaults only.
+A price already saved in this browser is never overwritten.
+*/
+const prices={...(next.servicePrices||{})};
+
+Object.entries(importedPrices).forEach(([id,rate])=>{
+if(!Object.prototype.hasOwnProperty.call(prices,id)){
+prices[id]=rate;
+pricesAdded++;
+}
+});
+
+if(pricesAdded>0){
+next.servicePrices=prices;
+}
+
+return {next,added,skipped,copied,pricesAdded};
 }
 
 function closeBackupPreview(){
@@ -1819,6 +2019,17 @@ pendingBackupImport=null;
 const box=document.getElementById("importPreview");
 box.replaceChildren();
 box.hidden=true;
+}
+
+function priceSettingsFormKey(){
+return JSON.stringify(Array.from(
+document.querySelectorAll(
+"#servicePriceFields input[data-service-id]"
+)
+).map(input=>[
+input.dataset.serviceId,
+input.value
+]));
 }
 
 async function previewBackup(input){
@@ -1846,19 +2057,21 @@ try{
 const text=await file.text();
 const parsed=JSON.parse(text.replace(/^\uFEFF/,""));
 const records=readBackupRecords(parsed);
+const importedPrices=readBackupServicePrices(parsed);
 
-/* Storage may have changed while the file was being read. */
 if(!library||savingBlocked){
 alert("Saved data changed. Please reload before importing.");
 return;
 }
 
-const plan=buildImportPlan(records);
+const plan=buildImportPlan(records,importedPrices);
 
 pendingBackupImport={
 records,
+importedPrices,
 storageRaw:lastStorageRaw,
-formRaw:JSON.stringify(collectData())
+formRaw:JSON.stringify(collectData()),
+priceFormRaw:priceSettingsFormKey()
 };
 
 const box=document.getElementById("importPreview");
@@ -1878,11 +2091,17 @@ summary.textContent=
 " · Already saved: "+plan.skipped+
 " · Separate copies for conflicting records: "+plan.copied;
 
+const priceSummary=document.createElement("p");
+priceSummary.textContent=
+"Missing service price settings to restore: "+plan.pricesAdded;
+
 const explanation=document.createElement("p");
 explanation.className="note";
 explanation.textContent=
 "Existing quotations will be kept. "+
 "Different versions of the same record will be added as separate copies. "+
+"Only missing custom price settings will be restored; "+
+"defaults already saved in this browser will be kept. "+
 "Your currently open quotation will stay open.";
 
 const list=document.createElement("ul");
@@ -1922,7 +2141,16 @@ cancelButton.textContent="Cancel";
 cancelButton.addEventListener("click",closeBackupPreview);
 
 actions.append(confirmButton,cancelButton);
-box.append(heading,fileName,summary,explanation,list,actions);
+
+box.append(
+heading,
+fileName,
+summary,
+priceSummary,
+explanation,
+list,
+actions
+);
 
 box.scrollIntoView({behavior:"smooth",block:"start"});
 
@@ -1944,23 +2172,25 @@ alert("Import stopped because browser saving is unavailable.");
 return;
 }
 
-/* Ask for a fresh preview if the user edited or switched quotations. */
+/* Refresh the preview if quotations or price fields changed. */
 if(
 lastStorageRaw!==pendingBackupImport.storageRaw||
-JSON.stringify(collectData())!==pendingBackupImport.formRaw
+JSON.stringify(collectData())!==pendingBackupImport.formRaw||
+priceSettingsFormKey()!==pendingBackupImport.priceFormRaw
 ){
 closeBackupPreview();
 
 alert(
-"Your quotations changed after this preview. "+
+"Your quotations or price settings changed after this preview. "+
 "Please select the backup again to review an updated import."
 );
 return;
 }
 
 const records=pendingBackupImport.records;
+const importedPrices=pendingBackupImport.importedPrices||{};
 
-/* Preserve the current form before adding any imported records. */
+/* Preserve the current quotation before importing. */
 if(!saveData()){
 alert(
 "Import stopped because the current quotation could not be saved. "+
@@ -1969,24 +2199,26 @@ alert(
 return;
 }
 
-const plan=buildImportPlan(records);
+const plan=buildImportPlan(records,importedPrices);
 
-if(plan.added===0){
+if(plan.added===0&&plan.pricesAdded===0){
 closeBackupPreview();
 
 setStatus(
-"No new quotations imported. "+
-plan.skipped+" unchanged record(s) are already saved."
+"No new data imported. "+
+plan.skipped+" unchanged quotation(s) are already saved. "+
+"Existing service price settings have been kept."
 );
 return;
 }
 
-/* One write adds the new records while keeping the current quotation. */
+/* Save quotations and restored prices together. */
 if(!persistLibrary(plan.next)){
 closeBackupPreview();
 
 alert(
-"Import could not be saved. No imported records were added. "+
+"Import could not be saved. "+
+"No imported quotations or price settings were added. "+
 "Keep your backup file and check the storage warning."
 );
 return;
@@ -1995,10 +2227,20 @@ return;
 closeBackupPreview();
 renderSavedQuotations();
 
+if(plan.pricesAdded>0){
+renderServicePriceSettings();
+
+document.getElementById("priceSettingsStatus").textContent=
+plan.pricesAdded+
+" missing service price setting(s) restored. "+
+"Previously saved defaults have been kept.";
+}
+
 setStatus(
 "Import complete: "+plan.added+" quotation(s) added; "+
-plan.skipped+" unchanged record(s) skipped. "+
-"Your previous quotations have been kept."
+plan.skipped+" unchanged quotation(s) skipped; "+
+plan.pricesAdded+" missing service price setting(s) restored. "+
+"Existing quotations and saved prices have been kept."
 );
 }
 /* INITIALIZATION */
@@ -2007,6 +2249,7 @@ updateValidUntil();
 defaultFields=clone(collectData().fields);
 
 initializeStorage();
+renderServicePriceSettings();
 
 quoteDate.addEventListener("change",()=>{
 updateValidUntil();
