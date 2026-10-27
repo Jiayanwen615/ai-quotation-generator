@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Cleaning Quote & Profit Calculator V20</title>
+<title>Cleaning Quote & Profit Calculator V21</title>
 <style>
 *{box-sizing:border-box}
 body{font-family:Arial,sans-serif;background:#eef2f7;color:#253247;margin:0;padding:25px}
@@ -30,6 +30,7 @@ th:last-child{width:10%}
 .total{text-align:right;font-size:25px;font-weight:bold;color:#175b9c;margin-top:25px}
 button{background:#175b9c;color:white;border:0;border-radius:6px;padding:12px 20px;margin-top:15px;cursor:pointer;font:inherit}
 button:hover{background:#104677}
+button:disabled{opacity:0.5;cursor:not-allowed}
 .delete-btn{background:#c0392b;padding:9px 12px;margin-top:0}
 .delete-btn:hover{background:#922b21}
 .secondary-btn{background:#287c65}
@@ -173,6 +174,28 @@ th:nth-child(4){width:18%}
 
 <div class="panel">
 <h2>Cleaning Cost &amp; Profit Calculator</h2>
+
+<div class="grid">
+<div>
+<label for="laborMode">Labor Estimation Mode</label>
+<select id="laborMode" onchange="calculate();saveData()">
+<option value="manual">Manual — 手动填写</option>
+<option value="auto">Automatic — 根据服务明细估算</option>
+</select>
+</div>
+
+<div>
+<label for="targetJobHours">Target Completion Time (hours)</label>
+<input id="targetJobHours" type="number" min="0.25" step="0.25" value="4">
+</div>
+
+<div>
+<label for="laborBuffer">Extra Labor Allowance (%)</label>
+<input id="laborBuffer" type="number" min="0" step="1" value="15">
+</div>
+</div>
+
+<p id="laborEstimateStatus" class="note" role="status" aria-live="polite"></p>
 <p class="note">
 Estimate the cost of one cleaning visit or job.
 Enter costs in the selected quotation currency.
@@ -202,6 +225,16 @@ Changing currency does not convert any amounts.
 
 <p class="warning" id="profitWarning"></p>
 <button type="button" class="secondary-btn" onclick="applySuggestedPrice()">Use Suggested Price in Quotation</button>
+
+<button
+type="button"
+id="undoSuggestedPriceButton"
+class="new-btn"
+onclick="undoSuggestedPrice()"
+disabled
+>Undo Suggested Price — 撤销建议报价</button>
+
+<input id="suggestedPriceState" type="hidden" value="">
 <p class="note">
 This is an estimate, not a market-price guarantee.
 Gross margin is calculated after entered costs and payment fees.
@@ -317,7 +350,9 @@ const fieldIds=[
 "aiInput","aiOutput","currency","quoteStatus",
 "workers","hours","laborRate","payrollBurden",
 "supplies","travel","overhead",
-"processingFee","targetMargin"
+"processingFee","targetMargin",
+"laborMode","targetJobHours","laborBuffer",
+"suggestedPriceState"
 ];
 
 const costDefaults={
@@ -419,6 +454,26 @@ seat:"Seat",
 job:"Job",
 qty:"Qty"
 };
+
+/*
+Trial planning assumptions: units completed per worker-hour.
+These are editable starting values, not guaranteed production rates.
+null means a manual productivity estimate is required.
+*/
+const LABOR_PRODUCTIVITY_DEFAULTS={
+office_regular:100,
+apartment_deep:25,
+villa_deep:20,
+post_construction:20,
+carpet_shampoo:40,
+tile_scrubbing:60,
+marble_polishing:20,
+apartment_regular:1,
+sofa:2,
+move_in_out:null,
+window:null,
+other:null
+};
 const currencySelect=document.getElementById("currency");
 const quoteDate=document.getElementById("quoteDate");
 const validUntil=document.getElementById("validUntil");
@@ -473,6 +528,9 @@ total+=amount;
 document.getElementById("total").textContent="Total: "+money(total);
 document.getElementById("unitPriceHeading").textContent=
 "Unit Price ("+currencySelect.value+")";
+
+updateLaborEstimate();
+calculateProfit();
 }
 
 function resizeDescription(element){
@@ -489,7 +547,8 @@ description="",
 qty="1",
 price="0",
 serviceType="",
-unit="sqm"
+unit="sqm",
+productivity
 ){
 const row=document.createElement("tr");
 
@@ -498,6 +557,18 @@ row.innerHTML=`
 <select class="service-type" aria-label="Service type"></select>
 <textarea class="description" rows="3" placeholder="Service description or additional details"></textarea>
 <p class="service-rate-note note"></p>
+
+<label class="note">
+<span class="productivity-caption"></span>
+<input
+type="number"
+min="0.01"
+step="0.01"
+class="productivity"
+placeholder="Enter estimated work rate"
+aria-label="Units completed per worker-hour"
+>
+</label>
 </td>
 <td>
 <input type="number" min="0" step="0.01" class="qty" aria-label="Quantity or area">
@@ -515,7 +586,15 @@ const serviceSelect=row.querySelector(".service-type");
 const unitSelect=row.querySelector(".unit");
 const descriptionField=row.querySelector(".description");
 const priceField=row.querySelector(".price");
+const productivityField=row.querySelector(".productivity");
+const caption=row.querySelector(".productivity-caption");
 const hint=row.querySelector(".service-rate-note");
+
+function updateCaption(){
+caption.textContent=
+"Estimated work rate: "+SERVICE_UNITS[unitSelect.value]+
+" per worker-hour";
+}
 
 const placeholder=document.createElement("option");
 placeholder.value="";
@@ -536,21 +615,31 @@ option.textContent=label;
 unitSelect.appendChild(option);
 });
 
-const knownService=SERVICE_CATALOG.some(service=>
+const restoredService=SERVICE_CATALOG.find(service=>
 service.id===serviceType
 );
 
 serviceSelect.value=
-serviceType===""?"":knownService?serviceType:"other";
+serviceType===""?"":restoredService?serviceType:"other";
 
 unitSelect.value=
 Object.prototype.hasOwnProperty.call(SERVICE_UNITS,unit)?
 unit:"qty";
 
-/* Restoring a quotation never reapplies catalog prices. */
 descriptionField.value=description;
 row.querySelector(".qty").value=qty;
 priceField.value=price;
+
+const defaultProductivity=
+restoredService&&restoredService.unit===unitSelect.value?
+LABOR_PRODUCTIVITY_DEFAULTS[restoredService.id]:null;
+
+productivityField.value=
+typeof productivity==="string"?productivity:
+Number.isFinite(defaultProductivity)?
+String(defaultProductivity):"";
+
+updateCaption();
 
 serviceSelect.addEventListener("change",()=>{
 const service=SERVICE_CATALOG.find(item=>
@@ -559,24 +648,32 @@ item.id===serviceSelect.value
 
 if(!service){
 hint.textContent="";
+calculate();
+saveData();
 return;
 }
 
 if(service.id==="other"){
+productivityField.value="";
 hint.textContent=
-"Enter your service description, quantity, unit and price.";
+"Enter your description, unit and price. "+
+"For automatic labor estimates, also enter a work rate.";
 descriptionField.focus();
 }else{
 descriptionField.value=service.label;
 unitSelect.value=service.unit;
+
+const workRate=LABOR_PRODUCTIVITY_DEFAULTS[service.id];
+productivityField.value=
+Number.isFinite(workRate)?String(workRate):"";
 
 const rate=getServiceRate(service);
 
 if(currencySelect.value==="AED"&&rate!==null){
 priceField.value=rate.toFixed(2);
 hint.textContent=
-"Default price per "+SERVICE_UNITS[service.unit]+
-" for one visit. You may adjust the price.";
+"Default price for one visit. "+
+"Price and estimated work rate can be adjusted.";
 }else{
 priceField.value="";
 hint.textContent=
@@ -585,21 +682,22 @@ hint.textContent=
 }
 }
 
+updateCaption();
 resizeDescription(descriptionField);
 calculate();
 saveData();
 });
 
 unitSelect.addEventListener("change",()=>{
-/* A different pricing unit requires a matching manual price. */
 serviceSelect.value="other";
 priceField.value="";
+productivityField.value="";
 
 hint.textContent=
-"Custom unit selected. Enter a price in "+
-currencySelect.value+" per "+
-SERVICE_UNITS[unitSelect.value]+".";
+"Custom unit selected. Enter a matching unit price "+
+"and, for automatic labor estimates, a work rate.";
 
+updateCaption();
 calculate();
 saveData();
 });
@@ -643,8 +741,228 @@ date.setDate(date.getDate()+30);
 validUntil.min=quoteDate.value;
 validUntil.value=formatDate(date);
 }
+/* AUTOMATIC LABOR ESTIMATION */
+let laborEstimateReady=true;
 
+function readSuggestedPriceState(){
+const field=document.getElementById("suggestedPriceState");
+if(!field||!field.value)return null;
+
+try{
+const state=JSON.parse(field.value);
+
+if(
+!state||
+state.version!==1||
+!validData({fields:{},items:state.beforeItems})||
+!validData({fields:{},items:state.appliedItems})||
+state.beforeItems.length===0||
+state.appliedItems.length===0
+){
+return null;
+}
+
+return state;
+}catch(error){
+return null;
+}
+}
+
+function laborItemsKey(items){
+return JSON.stringify(items.map(item=>({
+description:item.description,
+qty:item.qty,
+serviceType:item.serviceType||"",
+unit:item.unit||"qty",
+productivity:item.productivity||""
+})));
+}
+
+function getLaborBasisItems(){
+const current=collectData().items;
+const state=readSuggestedPriceState();
+
+if(
+state&&
+laborItemsKey(current)===laborItemsKey(state.appliedItems)
+){
+return state.beforeItems;
+}
+
+return current;
+}
+
+function updateSuggestedPriceButtons(){
+const state=readSuggestedPriceState();
+const undo=document.getElementById("undoSuggestedPriceButton");
+const apply=document.querySelector(
+'button[onclick="applySuggestedPrice()"]'
+);
+
+if(undo)undo.disabled=!state;
+
+if(apply){
+const automatic=
+document.getElementById("laborMode").value==="auto";
+
+apply.disabled=Boolean(state)||
+(automatic&&!laborEstimateReady);
+}
+}
+
+function updateLaborEstimate(){
+const mode=document.getElementById("laborMode");
+const status=document.getElementById("laborEstimateStatus");
+
+if(!mode||!status)return;
+
+const automatic=mode.value==="auto";
+const workersField=document.getElementById("workers");
+const hoursField=document.getElementById("hours");
+
+workersField.readOnly=automatic;
+hoursField.readOnly=automatic;
+
+if(!automatic){
+laborEstimateReady=true;
+status.textContent=
+"Manual mode: enter the worker count and hours per worker.";
+updateSuggestedPriceButtons();
+return;
+}
+
+function unavailable(message){
+laborEstimateReady=false;
+status.textContent=
+message+
+" Complete the estimate inputs or switch to Manual mode.";
+updateSuggestedPriceButtons();
+}
+
+const targetField=document.getElementById("targetJobHours");
+const bufferField=document.getElementById("laborBuffer");
+
+const target=Number(targetField.value);
+const buffer=Number(bufferField.value);
+
+if(
+!targetField.value.trim()||
+!targetField.checkValidity()||
+!Number.isFinite(target)||
+target<0.25
+){
+unavailable("Enter a valid target completion time.");
+return;
+}
+
+if(
+!bufferField.value.trim()||
+!bufferField.checkValidity()||
+!Number.isFinite(buffer)||
+buffer<0
+){
+unavailable("Enter a valid extra labor allowance.");
+return;
+}
+
+const items=getLaborBasisItems();
+
+if(!items.length){
+unavailable("Add at least one service.");
+return;
+}
+
+let baseHours=0;
+
+for(let index=0;index<items.length;index++){
+const item=items[index];
+const quantity=Number(item.qty);
+
+if(
+!String(item.qty).trim()||
+!Number.isFinite(quantity)||
+quantity<0
+){
+unavailable("Check the quantity in service row "+(index+1)+".");
+return;
+}
+
+if(quantity===0)continue;
+
+const productivity=Number(item.productivity);
+
+if(
+!String(item.productivity||"").trim()||
+!Number.isFinite(productivity)||
+productivity<=0
+){
+unavailable(
+"Enter a positive work rate in service row "+(index+1)+"."
+);
+return;
+}
+
+baseHours+=quantity/productivity;
+}
+
+const laborHours=baseHours*(1+buffer/100);
+
+if(!Number.isFinite(laborHours)||laborHours<=0){
+unavailable("Enter a positive service quantity and valid work rates.");
+return;
+}
+
+const workers=Math.max(1,Math.ceil(laborHours/target));
+const hoursPerWorker=
+Math.ceil((laborHours/workers)*4)/4;
+
+if(
+!Number.isSafeInteger(workers)||
+!Number.isFinite(hoursPerWorker)||
+hoursPerWorker<=0
+){
+unavailable("The estimate is too large. Check the entered values.");
+return;
+}
+
+workersField.value=String(workers);
+hoursField.value=hoursPerWorker.toFixed(2);
+laborEstimateReady=true;
+
+status.textContent=
+"Estimated workload: "+laborHours.toFixed(2)+
+" worker-hours including allowance. "+
+"Suggested team: "+workers+" worker(s) × "+
+hoursPerWorker.toFixed(2)+" hours each. "+
+"Time is rounded up to 15-minute blocks. "+
+"Review the work rates against actual site conditions.";
+
+updateSuggestedPriceButtons();
+}
 function calculateProfit(){
+if(
+document.getElementById("laborMode").value==="auto"&&
+!laborEstimateReady
+){
+currentSuggestedPrice=null;
+
+[
+"laborCostResult",
+"burdenResult",
+"costResult",
+"feeResult",
+"profitResult",
+"suggestedPrice"
+].forEach(id=>{
+document.getElementById(id).textContent="Not available";
+});
+
+document.getElementById("profitWarning").textContent=
+"Complete the automatic labor estimate before using a suggested price.";
+
+updateSuggestedPriceButtons();
+return;
+}
 const laborCost=
 nonNegative("workers")*
 nonNegative("hours")*
@@ -694,44 +1012,137 @@ warning.textContent=totalCost===0?
 }
 
 function applySuggestedPrice(){
-calculateProfit();
-
-if(currentSuggestedPrice===null||currentSuggestedPrice<=0){
-alert("Please enter valid costs and profit settings first.");
+if(readSuggestedPriceState()){
+alert("Undo the current suggested price before applying another one.");
 return;
 }
 
-if(document.querySelectorAll("#items tr").length===0){
-document.getElementById("items").appendChild(
-createRow("Cleaning service","1","0")
-);
+calculate();
+
+if(
+currentSuggestedPrice===null||
+!Number.isFinite(currentSuggestedPrice)||
+currentSuggestedPrice<=0
+){
+alert("Please complete valid labor, cost and profit settings first.");
+return;
 }
 
-const first=document.querySelector("#items tr");
+const beforeItems=clone(collectData().items);
+
+if(beforeItems.length===0){
+alert("Add your service details before applying a suggested price.");
+return;
+}
+
 const roundedPrice=Math.ceil(currentSuggestedPrice*100)/100;
 
-first.querySelector(".qty").value="1";
-first.querySelector(".price").value=roundedPrice.toFixed(2);
-
-const unitField=first.querySelector(".unit");
-const serviceField=first.querySelector(".service-type");
-const rateNote=first.querySelector(".service-rate-note");
-
-if(unitField)unitField.value="job";
-if(serviceField)serviceField.value="other";
-if(rateNote){
-rateNote.textContent="Suggested price for one complete job.";
+if(!Number.isFinite(roundedPrice)){
+alert("The suggested price is too large. Check your cost settings.");
+return;
 }
 
-calculate();
-saveData();
+const description=beforeItems.map(item=>{
+const service=SERVICE_CATALOG.find(entry=>
+entry.id===item.serviceType
+);
 
-alert(
-"Suggested price applied to the first service row. "+
-"Quantity set to 1. Review other rows."
+const name=item.description.trim()||
+(service&&service.id!=="other"?service.label:"Cleaning service");
+
+const unit=SERVICE_UNITS[item.unit]||"Qty";
+
+return name+"\nQuantity: "+item.qty+" "+unit;
+}).join("\n\n");
+
+const row=createRow(
+description,
+"1",
+roundedPrice.toFixed(2),
+"other",
+"job",
+""
+);
+
+document.getElementById("items").replaceChildren(row);
+
+const state={
+version:1,
+beforeItems,
+appliedItems:clone(collectData().items)
+};
+
+document.getElementById("suggestedPriceState").value=
+JSON.stringify(state);
+
+row.querySelector(".service-rate-note").textContent=
+"Whole-job suggested price applied. "+
+"Use Undo Suggested Price to restore the original service rows.";
+
+resizeAllDescriptions();
+calculate();
+
+if(saveData()){
+setStatus(
+"Suggested price applied to the whole job. "+
+"Original service details are saved for undo."
 );
 }
+}
 
+function undoSuggestedPrice(){
+const state=readSuggestedPriceState();
+
+if(!state){
+alert("There is no suggested price to undo for this quotation.");
+return;
+}
+
+const currentItems=collectData().items;
+
+if(
+JSON.stringify(currentItems)!==JSON.stringify(state.appliedItems)
+){
+const confirmed=confirm(
+"Service details have changed since the suggested price was applied.\n\n"+
+"Undo will replace the current service rows with the original rows.\n"+
+"Continue?"
+);
+
+if(!confirmed)return;
+}
+
+const restored=normalizeData({
+fields:collectData().fields,
+items:state.beforeItems
+});
+
+const tbody=document.getElementById("items");
+tbody.replaceChildren();
+
+restored.items.forEach(item=>{
+tbody.appendChild(createRow(
+item.description,
+item.qty,
+item.price,
+item.serviceType,
+item.unit,
+item.productivity
+));
+});
+
+document.getElementById("suggestedPriceState").value="";
+
+resizeAllDescriptions();
+calculate();
+
+if(saveData()){
+setStatus(
+"Suggested price undone. "+
+"Original descriptions, quantities, units and prices restored."
+);
+}
+}
 function collectData(){
 const fields={};
 
@@ -746,7 +1157,8 @@ description:row.querySelector(".description").value,
 qty:row.querySelector(".qty").value,
 price:row.querySelector(".price").value,
 serviceType:row.querySelector(".service-type")?.value??"other",
-unit:row.querySelector(".unit")?.value??"qty"
+unit:row.querySelector(".unit")?.value??"qty",
+productivity:row.querySelector(".productivity")?.value??""
 }));
 
 return {fields,items};
@@ -795,7 +1207,9 @@ serviceType:item.serviceType===""?"":
 SERVICE_CATALOG.some(service=>service.id===item.serviceType)?
 item.serviceType:"other",
 unit:Object.prototype.hasOwnProperty.call(SERVICE_UNITS,item.unit)?
-item.unit:"qty"
+item.unit:"qty",
+productivity:typeof item.productivity==="string"?
+item.productivity:undefined
 }))
 };
 }
@@ -823,7 +1237,8 @@ item.description,
 item.qty,
 item.price,
 item.serviceType,
-item.unit
+item.unit,
+item.productivity
 )
 );
 });
